@@ -187,8 +187,10 @@ elif st.session_state.step == 2:
     st.markdown("---")
     if st.button("Run Structural Hub Matching"):
         with st.spinner("Extracting Hessian ridges and executing Hub-and-Spoke matching..."):
+            from src.module2_matching.orb_fallback_matcher import ORBFallbackMatcher
             # Use structural matcher to bypass radiometric gaps
-            matcher = StructuralMatcher(backend="orb")
+            base_matcher = ORBFallbackMatcher()
+            matcher = StructuralMatcher(base_matcher=base_matcher)
             hub = HubAndSpokeMatcher(base_matcher=matcher)
             
             # Match OHRC to IIRS via TMC-2
