@@ -191,7 +191,7 @@ elif st.session_state.step == 2:
             # Use structural matcher to bypass radiometric gaps
             base_matcher = ORBFallbackMatcher()
             matcher = StructuralMatcher(base_matcher=base_matcher)
-            hub = HubAndSpokeMatcher(base_matcher=matcher)
+            hub = HubAndSpokeMatcher(hop1_matcher=matcher, hop2_matcher=matcher)
             
             # Match OHRC to IIRS via TMC-2
             res = hub.match(prep['ohrc'], prep['iirs'], prep['tmc2'])
