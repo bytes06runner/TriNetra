@@ -25,3 +25,4 @@ pyyaml>=6.0
 # Testing
 pytest>=7.4.0
 pytest-cov>=4.1.0
+scikit-image>=0.21.0
