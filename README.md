@@ -54,21 +54,24 @@ Implements the core hub-and-spoke matching orchestration with scale-aware handli
   2. **`orb_fallback_matcher.py` (Fallback):** Pure-OpenCV ORB + Hamming BFMatcher with Lowe's ratio test. Guarantees execution even in CPU-only, dependency-restricted environments.
 - **`src/module2_matching/hub_matcher.py`**: The central orchestrator (`HubAndSpokeMatcher`). Routes OHRC↔TMC-2 to Hop 1 and TMC-2↔IIRS to Hop 2. Strictly enforces the hub constraint by raising errors on direct 320x OHRC↔IIRS attempts, requiring composite routing instead.
 
-### Phase 3: Crater-Structural Verification (Upcoming)
-- Integration of MINIMA/XoFTR-style cross-modal matching and crater structural verification.
+### Phase 3: Crater-Structural Verification (Completed)
+Acts as a strict geometric filter to discard radiometrically similar but physically incorrect matches caused by extreme lunar shadows.
+- **`src/module3_crater_verification/structure_extractor.py`**: Extracts illumination-invariant structural topography. Avoids toy edge-detectors by utilizing mathematically robust **multi-scale Hessian ridge filters (Sato/Meijering)** from `scikit-image` to isolate continuous crater rims regardless of sun angle.
+- **`src/module3_crater_verification/verifier.py`**: Extracts local patches from the structural maps and computes rigorous **Normalized Cross-Correlation (NCC)** to geometrically verify Module 2 matches.
+- **`src/module3_crater_verification/structural_matcher.py`**: A pseudo-XoFTR fallback. Intercepts raw images, converts them entirely to structural maps, and runs LightGlue/ORB on the structure itself to bypass massive radiometric gaps entirely.
 
-### Phase 4 & 5: Registration and Visualization (Upcoming)
-- MAGSAC++/RANSAC geometric registration.
-- Confidence metrics and visual explainability outputs.
+### Phase 4 & 5: Registration and Visualization (Completed)
+- **`src/module4_registration/registration.py`**: Uses **MAGSAC++** (Marginalizing Sample Consensus via `cv2.USAC_MAGSAC`) to compute highly robust affine or homography transformation matrices, handling extreme outlier ratios.
+- **`src/module5_confidence/visualizer.py`**: Generates diagnostic explainability plots (side-by-side inlier/outlier match drawings and RGB warped image overlays) using `matplotlib` to visually justify the pipeline's correspondences for judges.
 
 ## Setup and Testing
 
 **Requirements:**
 `pip install -r requirements.txt`
-Dependencies include `torch`, `kornia`, `opencv-python-headless`, `rasterio`, `numpy`, `scipy`, `pytest`.
+Dependencies include `torch`, `kornia`, `opencv-python-headless`, `rasterio`, `numpy`, `scipy`, `scikit-image`, `matplotlib`, `pytest`.
 
 **Running Tests:**
-The pipeline is fully verified with 85 unit and integration tests covering both Phase 1 and Phase 2.
+The pipeline is fully verified with 99 unit and integration tests covering all 5 Modules.
 ```bash
 python3 -m pytest tests/ -v
 ```
