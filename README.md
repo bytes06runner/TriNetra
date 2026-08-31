@@ -68,7 +68,13 @@ Acts as a strict geometric filter to discard radiometrically similar but physica
 
 **Requirements:**
 `pip install -r requirements.txt`
-Dependencies include `torch`, `kornia`, `opencv-python-headless`, `rasterio`, `numpy`, `scipy`, `scikit-image`, `matplotlib`, `pytest`.
+Dependencies include `torch`, `kornia`, `opencv-python-headless`, `rasterio`, `numpy`, `scipy`, `scikit-image`, `matplotlib`, `streamlit`, `pytest`.
+
+**Running the Web Interface:**
+We built a beautiful, presentation-ready web frontend for the SIH judges.
+```bash
+python3 -m streamlit run app.py
+```
 
 **Running Tests:**
 The pipeline is fully verified with 99 unit and integration tests covering all 5 Modules.
