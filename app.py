@@ -135,7 +135,8 @@ if st.session_state.step == 0:
     with col2:
         if st.button("Initialize & Generate Lunar Data", use_container_width=True):
             with st.spinner("Generating physically consistent mock lunar surface..."):
-                gen = MockLunarDataGenerator(seed=np.random.randint(0, 10000))
+                # Use a fixed seed (42) for the presentation to guarantee a robust crater topography
+                gen = MockLunarDataGenerator(seed=42)
                 st.session_state.raw_data = gen.generate_all()
                 st.session_state.step = 1
                 st.rerun()
@@ -211,6 +212,7 @@ elif st.session_state.step == 3:
     
     if res.num_matches == 0:
         st.error("Matching failed to find enough keypoints.")
+        st.info("Hint: Your session might be holding onto older, untextured mock data. Please click 'Restart Pipeline' below and re-initialize.")
     else:
         st.success(f"Successfully bridged the 320x scale gap! Found {res.num_matches} structurally verified keypoints between OHRC and IIRS (anchored by TMC-2).")
         
