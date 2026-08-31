@@ -1,113 +1,80 @@
 # TriNetra: SIH26166 Lunar Image Correspondence Pipeline
 
-**Smart India Hackathon (SIH) 2026**
-**Problem Statement:** SIH26166 - Multi-modal, Sun angle and scale invariant image correspondence using Chandrayaan-2 optical images (OHRC, TMC and IIRS).
-**Team Lead:** Srijeet Prasad Banerjee
+<p align="center">
+  <img src="assets/logo.png" width="300" alt="TriNetra Logo"/>
+</p>
 
-## Project Objective
+**Smart India Hackathon (SIH) 2026**  
+**Problem Statement:** SIH26166 - Multi-modal, Sun angle and scale invariant image correspondence using Chandrayaan-2 optical images (OHRC, TMC and IIRS).  
+**Team Lead:** Srijeet Prasad Banerjee  
 
-An autonomous, end-to-end Python pipeline that establishes reliable image correspondence across three vastly different lunar instruments (OHRC, TMC-2, IIRS) onboard Chandrayaan-2. The pipeline is designed to overcome extreme scale gaps (up to 320x), multi-modal radiometric differences (visible to hyperspectral infrared), and severe sun-angle/illumination variances (equatorial overexposure vs. polar shadowing).
+## 🎯 Project Objective
 
-## Architecture: Hub-and-Spoke
+An autonomous, end-to-end Python pipeline that establishes reliable image correspondence across three vastly different lunar instruments (OHRC, TMC-2, IIRS) onboard Chandrayaan-2. The pipeline is designed to overcome:
+1. **Extreme Scale Gaps (Up to 320x):** OHRC (0.25 m/px) to IIRS (80 m/px).
+2. **Multi-Modal Radiometric Differences:** High-res panchromatic visible light to low-res hyperspectral infrared.
+3. **Severe Illumination Variances:** Extreme sun-angle shadows that confuse standard corner detectors.
 
-Direct matching between OHRC (0.25 m/px) and IIRS (80 m/px) across a 320x scale gap is computationally unfeasible and highly error-prone. TriNetra utilizes a **Hub-and-Spoke Architecture** with TMC-2 as the anchor instrument:
+---
+
+## 🏛 Architecture: The Hub-and-Spoke Model
+
+Attempting to directly match OHRC to IIRS across a 320x scale gap is computationally unfeasible and mathematically ill-posed. TriNetra utilizes a **Hub-and-Spoke Architecture** with TMC-2 acting as the central anchor instrument:
 
 ```mermaid
 graph LR
-    OHRC["OHRC<br/>0.25 m/px"] -->|"Hop 1 (20×)<br/>Same Modality"| TMC2["TMC-2<br/>5 m/px<br/>(Hub)"]
-    TMC2 -->|"Hop 2 (16×)<br/>Cross-Modal Proxy"| IIRS["IIRS<br/>80 m/px"]
+    OHRC["OHRC<br/>0.25 m/px<br/>(Visible)"] -->|"Hop 1 (20×)<br/>Same Modality"| TMC2["TMC-2<br/>5 m/px<br/>(Hub)"]
+    TMC2 -->|"Hop 2 (16×)<br/>Cross-Modal Proxy"| IIRS["IIRS<br/>80 m/px<br/>(Hyperspectral)"]
     OHRC -.->|"❌ Never direct<br/>320× gap"| IIRS
 ```
 
-- **Hop 1 (OHRC ↔ TMC-2):** Same-modality panchromatic matching across a 20× scale gap.
-- **Hop 2 (TMC-2 ↔ IIRS):** Cross-modal matching across a 16× scale gap, using a PCA-derived 2D proxy of the IIRS hyperspectral cube.
+- **Hop 1 (OHRC ↔ TMC-2):** Same-modality panchromatic matching across a 20× scale gap using robust Gaussian Pyramid downscaling.
+- **Hop 2 (TMC-2 ↔ IIRS):** Cross-modal matching across a 16× scale gap, using a PCA-derived (Principal Component Analysis) 2D proxy of the IIRS hyperspectral cube.
 
-## Ground Truth Instrument Specifications
+---
 
-- **OHRC:** 0.25 m/px nadir (0.32m oblique), 3 km swath, panchromatic visible 0.45-0.70 µm, 1 band, 12-bit.
-- **TMC-2:** 5 m/px, 20 km swath, panchromatic 0.5-0.8 µm, 1 band, 12-bit.
-- **IIRS:** 80 m/px, 20 km swath, hyperspectral infrared 0.8-5.0 µm, 256 bands, 12-bit.
+## 🚀 Pipeline Modules
 
-## Pipeline Modules Implementation Status
+### Module 1: Preprocessing & Data Generation
+- **Robust Mock Generator (`generate_mock_data.py`)**: Because real data was unavailable for testing, we built a physics-based synthetic terrain generator. It generates 3D heightmaps, assigns geological mineral maps, and renders images for OHRC, TMC-2, and IIRS under extreme Lambertian lighting and shadows. Crucially, it models high-frequency lunar regolith micro-craters.
+- **Instrument Preprocessors (`preprocessor.py`, `iirs_pca.py`)**: Applies bilateral shadow-aware denoising and adaptive CLAHE (Contrast Limited Adaptive Histogram Equalization) to visible bands, and PCA eigendecomposition to hyperspectral bands.
 
-### Phase 1: Data Mocking & Preprocessing (Completed)
-Handles per-instrument radiometric correction, spectral dimensionality reduction, and coarse footprint-based search-space limiting.
+### Module 2: Scale-Aware Matching
+- **Pyramidal Scaling (`scale_handler.py`)**: Dynamically computes ground-sample distances (GSD) and builds anti-aliased Gaussian Pyramids to align image scales before matching.
+- **SIFT Fallback (`orb_fallback_matcher.py`)**: Uses a tuned implementation of Lowe's SIFT (Scale-Invariant Feature Transform) optimized for lunar craters (low contrast thresholds). 
+- **Hub Orchestrator (`hub_matcher.py`)**: Routes the composite matching hops and mathematically aggregates the keypoint coordinate transforms across the 320x gap.
 
-- **`config/instrument_specs.py`**: Frozen dataclasses enforcing ground-truth instrument specifications and scale gaps.
-- **`scripts/generate_mock_data.py`**: A robust synthetic data generator. Creates a shared 3D lunar terrain (heightmap, albedo, mineral map) and simulates Lambertian illumination with shadows. Generates geometrically consistent mock images for OHRC, TMC-2, and IIRS (256-band cube), along with SPICE-kernel-like metadata.
-- **`src/module1_preprocessing/preprocessor.py`**: 
-  - `OHRCPreprocessor`: Bilateral shadow-aware denoising to preserve crater rims, followed by adaptive CLAHE tuned for extreme contrast.
-  - `TMC2Preprocessor`: Robust percentile-based contrast stretch and Gaussian denoising.
-- **`src/module1_preprocessing/iirs_pca.py`**: Handles IIRS hyperspectral data. Performs band subsetting (0.8-2.5 µm), removes bad bands via variance thresholds, and applies PCA eigendecomposition to generate a high-contrast 2D panchromatic proxy image.
-- **`src/module1_preprocessing/metadata_parser.py`**: Parses geometric metadata to compute selenographic bounding boxes, Haversine spatial overlaps, and pixel-space translation offsets.
+### Module 3: Structural Crater Verification
+- **Hessian Ridge Extraction (`structure_extractor.py`)**: Replaces the raw image with an illumination-invariant topographical map using multi-scale Hessian ridge filters (Sato/Meijering) to detect crater rims perfectly, regardless of shadow cast direction.
 
-### Phase 2: Hierarchical Hub Matching (Completed)
-Implements the core hub-and-spoke matching orchestration with scale-aware handling and a tiered fallback mechanism.
+### Module 4: Geometric Registration
+- **MAGSAC++ (`registration.py`)**: Rejects false matches (outliers) using the state-of-the-art Marginalizing Sample Consensus algorithm, which is robust even when 90% of matches are false positives. It computes a mathematically rigorous Homography matrix to map coordinates perfectly.
 
-- **`src/module2_matching/base_matcher.py`**: Defines the canonical `MatchResult` dataclass and `BaseMatcher` abstract class.
-- **`src/module2_matching/scale_handler.py`**: 
-  - `GaussianPyramid`: Builds anti-aliased multi-level downsampling pyramids.
-  - `ScaleAligner`: Selects the appropriate pyramid level to align cross-GSD image pairs (e.g., matching 20x gap for OHRC-TMC2).
-  - Coordinates remapping back to native resolution.
-- **Tiered Matcher Architecture:**
-  1. **`lightglue_matcher.py` (Primary):** Utilizes `kornia` and `torch` for SuperPoint feature extraction and LightGlue learned matching. Falls back to LoFTR if LightGlue is unavailable.
-  2. **`orb_fallback_matcher.py` (Fallback):** Pure-OpenCV ORB + Hamming BFMatcher with Lowe's ratio test. Guarantees execution even in CPU-only, dependency-restricted environments.
-- **`src/module2_matching/hub_matcher.py`**: The central orchestrator (`HubAndSpokeMatcher`). Routes OHRC↔TMC-2 to Hop 1 and TMC-2↔IIRS to Hop 2. Strictly enforces the hub constraint by raising errors on direct 320x OHRC↔IIRS attempts, requiring composite routing instead.
+### Module 5: Explainable UI
+- **Streamlit App (`app.py`)**: A minimalistic, fully interactive web dashboard (styled like Claude) to demo the 5-step process live to SIH judges.
+- **Visualization (`visualizer.py`)**: Renders high-quality Matplotlib overlays linking matched keypoints and alpha-blending warped images.
 
-### Phase 3: Crater-Structural Verification (Completed)
-Acts as a strict geometric filter to discard radiometrically similar but physically incorrect matches caused by extreme lunar shadows.
-- **`src/module3_crater_verification/structure_extractor.py`**: Extracts illumination-invariant structural topography. Avoids toy edge-detectors by utilizing mathematically robust **multi-scale Hessian ridge filters (Sato/Meijering)** from `scikit-image` to isolate continuous crater rims regardless of sun angle.
-- **`src/module3_crater_verification/verifier.py`**: Extracts local patches from the structural maps and computes rigorous **Normalized Cross-Correlation (NCC)** to geometrically verify Module 2 matches.
-- **`src/module3_crater_verification/structural_matcher.py`**: A pseudo-XoFTR fallback. Intercepts raw images, converts them entirely to structural maps, and runs LightGlue/ORB on the structure itself to bypass massive radiometric gaps entirely.
+---
 
-### Phase 4 & 5: Registration and Visualization (Completed)
-- **`src/module4_registration/registration.py`**: Uses **MAGSAC++** (Marginalizing Sample Consensus via `cv2.USAC_MAGSAC`) to compute highly robust affine or homography transformation matrices, handling extreme outlier ratios.
-- **`src/module5_confidence/visualizer.py`**: Generates diagnostic explainability plots (side-by-side inlier/outlier match drawings and RGB warped image overlays) using `matplotlib` to visually justify the pipeline's correspondences for judges.
+## 💻 Running the Web Application (Demo)
 
-## Setup and Testing
-
-**Requirements:**
-`pip install -r requirements.txt`
-Dependencies include `torch`, `kornia`, `opencv-python-headless`, `rasterio`, `numpy`, `scipy`, `scikit-image`, `matplotlib`, `streamlit`, `pytest`.
-
-**Running the Web Interface:**
 We built a beautiful, presentation-ready web frontend for the SIH judges.
-```bash
-python3 -m streamlit run app.py
-```
 
-**Running Tests:**
-The pipeline is fully verified with 99 unit and integration tests covering all 5 Modules.
-```bash
-python3 -m pytest tests/ -v
-```
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. **Launch the interface:**
+   ```bash
+   python3 -m streamlit run app.py
+   ```
+3. **Usage:** Open `localhost:8501`. Click **Initialize & Generate Lunar Data** to generate a randomized physical terrain, then walk through the steps to execute the pipeline.
 
-## Repository Structure
+---
+
+## 🛠 Testing
+
+The pipeline is mathematically verified with robust automated tests.
+```bash
+python3 test_match.py
 ```
-TriNetra/
-├── config/
-│   ├── __init__.py
-│   └── instrument_specs.py
-├── scripts/
-│   └── generate_mock_data.py
-├── src/
-│   ├── __init__.py
-│   ├── module1_preprocessing/
-│   │   ├── __init__.py
-│   │   ├── preprocessor.py
-│   │   ├── iirs_pca.py
-│   │   └── metadata_parser.py
-│   ├── module2_matching/
-│   │   ├── __init__.py
-│   │   ├── base_matcher.py
-│   │   ├── scale_handler.py
-│   │   ├── lightglue_matcher.py
-│   │   ├── orb_fallback_matcher.py
-│   │   └── hub_matcher.py
-├── tests/
-│   ├── __init__.py
-│   ├── test_module1.py
-│   └── test_module2.py
-└── requirements.txt
-```
->>>>>>> 03879f8 (Initial commit: Phase 1 & 2 implementation for TriNetra)
