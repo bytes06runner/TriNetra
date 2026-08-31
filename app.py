@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 # TriNetra Pipeline Modules
 from scripts.generate_mock_data import MockLunarDataGenerator
 from src.module1_preprocessing.preprocessor import OHRCPreprocessor, TMC2Preprocessor
-from src.module1_preprocessing.iirs_preprocessor import IIRSPreprocessor
+from src.module1_preprocessing.iirs_pca import IIRSPreprocessor
 from src.module2_matching.hub_matcher import HubAndSpokeMatcher
 from src.module3_crater_verification.structural_matcher import StructuralMatcher
 from src.module4_registration.registration import GeometricRegistrar
