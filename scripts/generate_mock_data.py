@@ -92,14 +92,21 @@ class MockLunarDataGenerator:
 
             height = noise * 0.2  # Base undulation
             
-            # Place craters
+            # Place random craters
             num_craters = self.rng.integers(30, 80)
             Y, X = np.ogrid[:self.base_size, :self.base_size]
             
-            for _ in range(num_craters):
-                cx = self.rng.integers(0, self.base_size)
-                cy = self.rng.integers(0, self.base_size)
-                r = self.rng.integers(3, 200)
+            # --- Guarantee one prominent crater in the center for the OHRC crop ---
+            crater_centers_x = [self.base_size // 2]
+            crater_centers_y = [self.base_size // 2]
+            crater_radii = [150]
+            
+            for _ in range(num_craters - 1):
+                crater_centers_x.append(self.rng.integers(0, self.base_size))
+                crater_centers_y.append(self.rng.integers(0, self.base_size))
+                crater_radii.append(self.rng.integers(3, 200))
+                
+            for cx, cy, r in zip(crater_centers_x, crater_centers_y, crater_radii):
                 
                 dist_sq = (X - cx)**2 + (Y - cy)**2
                 mask_in = dist_sq < r**2
