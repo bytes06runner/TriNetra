@@ -194,7 +194,13 @@ elif st.session_state.step == 2:
             hub = HubAndSpokeMatcher(hop1_matcher=matcher, hop2_matcher=matcher)
             
             # Match OHRC to IIRS via TMC-2
-            res = hub.match(prep['ohrc'], prep['iirs'], prep['tmc2'])
+            res = hub.match(
+                src_image=prep['ohrc'].image, 
+                dst_image=prep['iirs'].image, 
+                src_instrument="OHRC", 
+                dst_instrument="IIRS", 
+                tmc2_image=prep['tmc2'].image
+            )
             st.session_state.match_result = res
             st.session_state.step = 3
             st.rerun()
