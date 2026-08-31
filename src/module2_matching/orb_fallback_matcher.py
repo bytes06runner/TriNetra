@@ -37,7 +37,7 @@ class ORBFallbackMatcher(BaseMatcher):
     def __init__(
         self,
         max_keypoints: int = 5000,
-        ratio_threshold: float = 0.75,
+        ratio_threshold: float = 0.9,
         confidence_threshold: float = 0.3,
         upsample_low_res: float = 1.0,
     ):
@@ -46,11 +46,11 @@ class ORBFallbackMatcher(BaseMatcher):
         self.ratio_threshold = ratio_threshold
         self.upsample_low_res = upsample_low_res
 
-        # ORB detector
-        self._orb = cv2.ORB_create(nfeatures=self.max_keypoints)
+        # SIFT detector (better on synthetic lunar craters)
+        self._orb = cv2.SIFT_create(nfeatures=self.max_keypoints, contrastThreshold=0.01, edgeThreshold=20)
 
-        # Brute-force matcher with Hamming distance (ORB uses binary descriptors)
-        self._bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=False)
+        # Brute-force matcher with L2 distance (SIFT uses float descriptors)
+        self._bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
 
     # -----------------------------------------------------------------
     # Public API
@@ -143,9 +143,9 @@ class ORBFallbackMatcher(BaseMatcher):
         )
 
         # 8. Compute per-match confidence from descriptor distance
-        #    ORB Hamming distances are in [0, 256]; lower = better.
+        #    SIFT L2 distances can be up to ~500; lower = better.
         distances = np.array([m.distance for m in good_matches], dtype=np.float32)
-        max_dist = 256.0
+        max_dist = 500.0
         confidences = np.clip(1.0 - distances / max_dist, 0.0, 1.0)
 
         # 9. Map keypoints back to original coordinates

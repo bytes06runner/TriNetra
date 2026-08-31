@@ -122,8 +122,15 @@ class MockLunarDataGenerator:
             max_h = np.max(height)
             if max_h > 0:
                 height /= max_h
-                
-            self._heightmap = height
+            
+            # --- Inject high-frequency texture (micro-craters and boulders) ---
+            # Real feature matchers (ORB/SIFT) need corners, not just smooth gradients.
+            hf_noise = self.rng.normal(0, 0.05, (self.base_size, self.base_size))
+            # Create sharp speckles
+            hf_noise = np.where(hf_noise > 0.1, hf_noise * 5, hf_noise)
+            height += hf_noise
+
+            self._heightmap = np.clip(height, 0, 1)
             
         except Exception:
             self._heightmap = np.zeros((self.base_size, self.base_size), dtype=np.float64)
@@ -133,18 +140,29 @@ class MockLunarDataGenerator:
     @property
     def albedo_map(self) -> np.ndarray:
         """
-        Surface reflectance at base resolution.
+        Surface reflectance with high-frequency spatial variation.
         """
         if self._albedo_map is not None:
             return self._albedo_map
 
         try:
-            # Base albedo variation
-            raw_noise = self.rng.normal(0.15, 0.02, (self.base_size, self.base_size))
-            smoothed = scipy.ndimage.gaussian_filter(raw_noise, sigma=30.0)
-            albedo = np.clip(smoothed, 0.1, 0.25).astype(np.float32)
+            # Base lunar albedo is low (~0.12)
+            albedo = np.full((self.base_size, self.base_size), 0.12, dtype=np.float32)
             
-            self._albedo_map = albedo
+            # Add broad regional variations
+            macro = scipy.ndimage.gaussian_filter(self.rng.normal(0, 1, (self.base_size, self.base_size)), sigma=30)
+            albedo += macro * 0.03
+            
+            # Add intense high-frequency salt-and-pepper texture (boulders/ejecta) for feature tracking
+            micro = self.rng.normal(0, 0.05, (self.base_size, self.base_size))
+            # Boulders (bright spots)
+            micro = np.where(micro > 0.1, micro * 3, micro)
+            # Shadows/Micro-craters (dark spots)
+            micro = np.where(micro < -0.1, micro * 3, micro)
+            
+            albedo += micro
+            
+            self._albedo_map = np.clip(albedo, 0.01, 0.3).astype(np.float32)
         except Exception:
             self._albedo_map = np.full((self.base_size, self.base_size), 0.15, dtype=np.float32)
 

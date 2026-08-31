@@ -188,8 +188,7 @@ elif st.session_state.step == 2:
     if st.button("Run Structural Hub Matching"):
         with st.spinner("Extracting Hessian ridges and executing Hub-and-Spoke matching..."):
             from src.module2_matching.orb_fallback_matcher import ORBFallbackMatcher
-            # Use structural matcher to bypass radiometric gaps
-            base_matcher = ORBFallbackMatcher()
+            base_matcher = ORBFallbackMatcher(upsample_low_res=4.0)
             matcher = StructuralMatcher(base_matcher=base_matcher)
             hub = HubAndSpokeMatcher(hop1_matcher=matcher, hop2_matcher=matcher)
             
@@ -227,7 +226,7 @@ elif st.session_state.step == 3:
     st.markdown("---")
     if st.button("Run Geometric Registration"):
         with st.spinner("Computing MAGSAC++ transform..."):
-            registrar = GeometricRegistrar(transform_type="affine")
+            registrar = GeometricRegistrar(transform_type="homography")
             reg_res = registrar.register(res)
             st.session_state.reg_result = reg_res
             st.session_state.step = 4
