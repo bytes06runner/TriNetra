@@ -345,6 +345,7 @@ def animated_section(html: str, delay: str = ""):
 # ─── Session State ────────────────────────────────────────────────────
 defaults = {
     "step": 0,
+    "mode": "demo",
     "raw_data": None,
     "prep_data": None,
     "match_result": None,
@@ -439,16 +440,15 @@ if current_step == 0:
 
     st.markdown("<br/>", unsafe_allow_html=True)
 
-    # CTA Button
-    col1, col2, col3 = st.columns([1.2, 1, 1.2])
-    with col2:
-        if st.button("Initialize Pipeline →", use_container_width=True):
+    # Two-mode CTA
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🛰  Load Real ISRO Data", use_container_width=True):
             with st.spinner("Memory-mapping real Chandrayaan-2 PDS4 binary files…"):
                 ohrc_loader = Chandrayaan2Loader(OHRC_IMG, OHRC_XML)
                 tmc_loader  = Chandrayaan2Loader(TMC_IMG, TMC_XML)
                 iirs_loader = Chandrayaan2Loader(IIRS_QUB, IIRS_XML)
 
-                # Extract centre patches
                 ohrc_patch = ohrc_loader.get_patch(
                     ohrc_loader.meta.lines // 2,
                     ohrc_loader.meta.samples // 2,
@@ -466,8 +466,28 @@ if current_step == 0:
                     "tmc2": {"image": tmc_patch, "meta": tmc_loader.meta},
                     "iirs": {"band34": iirs_band34, "meta": iirs_loader.meta},
                 }
+                st.session_state.mode = "real"
                 st.session_state.step = 1
                 st.rerun()
+
+    with col2:
+        if st.button("▶  Full Pipeline Demo", use_container_width=True):
+            with st.spinner("Generating physically consistent synthetic terrain…"):
+                from scripts.generate_mock_data import MockLunarDataGenerator
+                gen = MockLunarDataGenerator(seed=42)
+                st.session_state.raw_data = gen.generate_all()
+                st.session_state.mode = "demo"
+                st.session_state.step = 1
+                st.rerun()
+
+    st.markdown("""
+    <div class="animate-in-delay2" style="text-align:center; margin-top:1rem;">
+        <p style="font-size:0.8rem; color:#aaa; max-width:550px; margin:0 auto;">
+            <strong>Real Data</strong> — loads 1 GB+ Chandrayaan-2 binaries for I/O & preprocessing demo.<br/>
+            <strong>Full Demo</strong> — runs the complete matching + registration pipeline end-to-end.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -592,23 +612,32 @@ elif current_step == 2:
 
     col1, col2, col3 = st.columns([1.5, 1, 1.5])
     with col2:
-        if st.button("Run Structural Matching →", use_container_width=True):
-            with st.spinner("Extracting Hessian ridges and executing Hub-and-Spoke matching…"):
-                from src.module2_matching.orb_fallback_matcher import ORBFallbackMatcher
-                base_matcher = ORBFallbackMatcher(upsample_low_res=4.0)
-                matcher = StructuralMatcher(base_matcher=base_matcher)
-                hub = HubAndSpokeMatcher(hop1_matcher=matcher, hop2_matcher=matcher)
-
-                res = hub.match(
-                    src_image=prep["ohrc"].image,
-                    dst_image=prep["iirs"].image,
-                    src_instrument="OHRC",
-                    dst_instrument="IIRS",
-                    tmc2_image=prep["tmc2"].image,
-                )
-                st.session_state.match_result = res
-                st.session_state.step = 3
+        if st.session_state.mode == "real":
+            st.info("The loaded real ISRO datasets are from completely different lunar regions (OHRC: South Pole, TMC-2: North Pole, IIRS: Equatorial) and therefore do not geographically overlap. Matching is not physically possible on this specific data slice.")
+            st.markdown('<div class="secondary-btn">', unsafe_allow_html=True)
+            if st.button("↻ Return to Start & Run Demo Pipeline", use_container_width=True):
+                for key in defaults:
+                    st.session_state[key] = defaults[key]
                 st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            if st.button("Run Structural Matching →", use_container_width=True):
+                with st.spinner("Extracting Hessian ridges and executing Hub-and-Spoke matching…"):
+                    from src.module2_matching.orb_fallback_matcher import ORBFallbackMatcher
+                    base_matcher = ORBFallbackMatcher(upsample_low_res=4.0)
+                    matcher = StructuralMatcher(base_matcher=base_matcher)
+                    hub = HubAndSpokeMatcher(hop1_matcher=matcher, hop2_matcher=matcher)
+
+                    res = hub.match(
+                        src_image=prep["ohrc"].image,
+                        dst_image=prep["iirs"].image,
+                        src_instrument="OHRC",
+                        dst_instrument="IIRS",
+                        tmc2_image=prep["tmc2"].image,
+                    )
+                    st.session_state.match_result = res
+                    st.session_state.step = 3
+                    st.rerun()
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
