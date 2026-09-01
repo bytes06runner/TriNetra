@@ -17,14 +17,34 @@ import io
 import base64
 from pathlib import Path
 
-# TriNetra Pipeline Modules
-from scripts.generate_mock_data import MockLunarDataGenerator
-from src.module1_preprocessing.preprocessor import OHRCPreprocessor, TMC2Preprocessor
-from src.module1_preprocessing.iirs_pca import IIRSPreprocessor
+# TriNetra Pipeline Modules — Real Data
+from src.data_loader import Chandrayaan2Loader
+from src.module1_preprocessing_real import (
+    OHRCRealPreprocessor,
+    TMC2RealPreprocessor,
+    IIRSRealPreprocessor,
+)
 from src.module2_matching.hub_matcher import HubAndSpokeMatcher
 from src.module3_crater_verification.structural_matcher import StructuralMatcher
 from src.module4_registration.registration import GeometricRegistrar
 from src.module5_confidence.visualizer import ExplainabilityVisualizer
+
+# ─── Data file paths (auto-discovered from ./data/) ──────────────────
+DATA_ROOT = Path(__file__).resolve().parent / "data"
+
+OHRC_DIR = DATA_ROOT / "ch2_ohr_ncp_20211023T0027462822_d_img_d18"
+OHRC_IMG = OHRC_DIR / "data" / "calibrated" / "20211023" / "ch2_ohr_ncp_20211023T0027462822_d_img_d18.img"
+OHRC_XML = OHRC_IMG.with_suffix(".xml")
+
+TMC_DIR  = DATA_ROOT / "ch2_tmc_ncn_20221205T1633075527_d_img_d32"
+TMC_IMG  = TMC_DIR / "data" / "calibrated" / "20221205" / "ch2_tmc_ncn_20221205T1633075527_d_img_d32.img"
+TMC_XML  = TMC_IMG.with_suffix(".xml")
+
+IIRS_DIR = DATA_ROOT / "ch2_iir_nri_20231003T2152304115_d_img_d18"
+IIRS_QUB = IIRS_DIR / "data" / "raw" / "20231003" / "ch2_iir_nri_20231003T2152304115_d_img_d18.qub"
+IIRS_XML = IIRS_QUB.with_suffix(".xml")
+
+PATCH_SIZE = 2000  # Extract 2000×2000 centre patches
 
 
 # ─── Page Config ─────────────────────────────────────────────────────
@@ -423,9 +443,29 @@ if current_step == 0:
     col1, col2, col3 = st.columns([1.2, 1, 1.2])
     with col2:
         if st.button("Initialize Pipeline →", use_container_width=True):
-            with st.spinner("Generating physically consistent lunar terrain…"):
-                gen = MockLunarDataGenerator(seed=42)
-                st.session_state.raw_data = gen.generate_all()
+            with st.spinner("Memory-mapping real Chandrayaan-2 PDS4 binary files…"):
+                ohrc_loader = Chandrayaan2Loader(OHRC_IMG, OHRC_XML)
+                tmc_loader  = Chandrayaan2Loader(TMC_IMG, TMC_XML)
+                iirs_loader = Chandrayaan2Loader(IIRS_QUB, IIRS_XML)
+
+                # Extract centre patches
+                ohrc_patch = ohrc_loader.get_patch(
+                    ohrc_loader.meta.lines // 2,
+                    ohrc_loader.meta.samples // 2,
+                    size=PATCH_SIZE,
+                )
+                tmc_patch = tmc_loader.get_patch(
+                    tmc_loader.meta.lines // 2,
+                    tmc_loader.meta.samples // 2,
+                    size=PATCH_SIZE,
+                )
+                _, iirs_band34 = iirs_loader.get_band_by_wavelength(1285.0)
+
+                st.session_state.raw_data = {
+                    "ohrc": {"image": ohrc_patch, "meta": ohrc_loader.meta},
+                    "tmc2": {"image": tmc_patch, "meta": tmc_loader.meta},
+                    "iirs": {"band34": iirs_band34, "meta": iirs_loader.meta},
+                }
                 st.session_state.step = 1
                 st.rerun()
 
@@ -438,27 +478,47 @@ elif current_step == 1:
     <div class="animate-in">
         <h1>Data Ingestion</h1>
         <p style="color:#666; max-width:700px;">
-            Raw lunar surface data loaded. Three instruments, three vastly different scales
-            and modalities — all imaging the same terrain.
+            Real Chandrayaan-2 PDS4 data loaded via memory-mapped I/O.
+            Centre patches extracted from each instrument's full-resolution image.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
     raw = st.session_state.raw_data
 
+    # Normalise raw patches for display
+    def norm_display(img):
+        """Normalise any dtype image to float32 [0,1] for display."""
+        img = img.astype(np.float64)
+        lo, hi = np.percentile(img, 1), np.percentile(img, 99)
+        if hi - lo < 1e-6:
+            return np.zeros_like(img, dtype=np.float32)
+        return np.clip((img - lo) / (hi - lo), 0, 1).astype(np.float32)
+
     # Instrument images
     st.markdown('<div class="animate-in-delay">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
-        render_image(raw["ohrc"]["image"], "OHRC — 0.25 m/px  ·  Visible")
-        st.markdown(metric_card("Scale", "1×", "Highest resolution"), unsafe_allow_html=True)
+        render_image(norm_display(raw["ohrc"]["image"]),
+                     f"OHRC — {raw['ohrc']['meta'].pixel_resolution_m} m/px  ·  Visible")
+        st.markdown(metric_card(
+            "OHRC", f"{raw['ohrc']['meta'].pixel_resolution_m} m/px",
+            f"Sun El: {raw['ohrc']['meta'].sun_elevation_deg:.1f}° · {raw['ohrc']['meta'].area}"
+        ), unsafe_allow_html=True)
     with c2:
-        render_image(raw["tmc2"]["image"], "TMC-2 — 5 m/px  ·  Visible")
-        st.markdown(metric_card("Scale", "20×", "Hub instrument"), unsafe_allow_html=True)
+        render_image(norm_display(raw["tmc2"]["image"]),
+                     f"TMC-2 — {raw['tmc2']['meta'].pixel_resolution_m} m/px  ·  Visible")
+        st.markdown(metric_card(
+            "TMC-2", f"{raw['tmc2']['meta'].pixel_resolution_m} m/px",
+            f"Sun El: {raw['tmc2']['meta'].sun_elevation_deg:.1f}° · {raw['tmc2']['meta'].area}"
+        ), unsafe_allow_html=True)
     with c3:
-        iirs_avg = np.mean(raw["iirs"]["cube"], axis=2)
-        render_image(iirs_avg, "IIRS — 80 m/px  ·  Mean Hyperspectral Band")
-        st.markdown(metric_card("Scale", "320×", "256 spectral bands"), unsafe_allow_html=True)
+        render_image(norm_display(raw["iirs"]["band34"]),
+                     f"IIRS Band 34 (~1285 nm) — {raw['iirs']['meta'].pixel_resolution_m} m/px")
+        st.markdown(metric_card(
+            "IIRS", f"{raw['iirs']['meta'].pixel_resolution_m} m/px",
+            f"Sun El: {raw['iirs']['meta'].sun_elevation_deg:.1f}° · 256 bands"
+        ), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("---")
@@ -466,14 +526,14 @@ elif current_step == 1:
     col1, col2, col3 = st.columns([1.5, 1, 1.5])
     with col2:
         if st.button("Run Preprocessing →", use_container_width=True):
-            with st.spinner("Applying shadow-aware CLAHE, percentile stretching, and PCA…"):
-                prep_ohrc = OHRCPreprocessor().preprocess(raw["ohrc"]["image"])
-                prep_tmc2 = TMC2Preprocessor().preprocess(raw["tmc2"]["image"])
-                prep_iirs = IIRSPreprocessor().preprocess(raw["iirs"]["cube"])
+            with st.spinner("Applying shadow-aware CLAHE and percentile stretching…"):
+                ohrc_result = OHRCRealPreprocessor().preprocess(raw["ohrc"]["image"])
+                tmc_result  = TMC2RealPreprocessor().preprocess(raw["tmc2"]["image"])
+                iirs_result = IIRSRealPreprocessor().preprocess(band_2d=raw["iirs"]["band34"])
                 st.session_state.prep_data = {
-                    "ohrc": prep_ohrc,
-                    "tmc2": prep_tmc2,
-                    "iirs": prep_iirs,
+                    "ohrc": ohrc_result,
+                    "tmc2": tmc_result,
+                    "iirs": iirs_result,
                 }
                 st.session_state.step = 2
                 st.rerun()
@@ -510,21 +570,21 @@ elif current_step == 2:
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown(metric_card(
-            "OHRC Confidence",
-            f"{prep['ohrc'].confidence:.0%}",
-            f"Shadow: {prep['ohrc'].quality_metrics.get('shadow_fraction', 0):.0%}"
+            "OHRC Quality",
+            f"{prep['ohrc'].dynamic_range:.0f} DN",
+            f"Shadow: {prep['ohrc'].shadow_fraction:.0%} · Clip: {prep['ohrc'].clip_limit:.1f}"
         ), unsafe_allow_html=True)
     with c2:
         st.markdown(metric_card(
-            "TMC-2 Confidence",
-            f"{prep['tmc2'].confidence:.0%}",
-            f"Dynamic Range: {prep['tmc2'].quality_metrics.get('dynamic_range', 0):.2f}"
+            "TMC-2 Quality",
+            f"{prep['tmc2'].dynamic_range:.0f} DN",
+            f"Saturation: {prep['tmc2'].saturation_fraction:.0%}"
         ), unsafe_allow_html=True)
     with c3:
         st.markdown(metric_card(
-            "IIRS Confidence",
-            f"{prep['iirs'].confidence:.0%}",
-            f"Entropy: {prep['iirs'].quality_metrics.get('entropy', 0):.2f}"
+            "IIRS Quality",
+            f"{prep['iirs'].dynamic_range:.0f} DN",
+            f"Shadow: {prep['iirs'].shadow_fraction:.0%}"
         ), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
