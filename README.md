@@ -370,15 +370,11 @@ TriNetra/
 
 ---
 
-## 👥 Team
+## 👤 Developer
 
 | Role | Name |
 |:---|:---|
-| **Team Lead & Lead Developer** | Srijeet Prasad Banerjee |
-| **Developer** | Priyanshu Saha |
-| **Developer** | Pritam Patra |
-| **Developer** | Sayan Hazra |
-| **Developer** | Priyanshu Sarkar |
+| **Solo Developer** | Srijeet Prasad Banerjee |
 
 ---
 
