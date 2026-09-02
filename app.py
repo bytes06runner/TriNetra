@@ -548,11 +548,10 @@ elif current_step == 1:
                 tmc_result  = preprocess_synthetic_tmc2(raw["ohrc"]["image"], raw["ohrc"]["meta"].pixel_resolution_m, tmc2_target_gsd=5.0)
                 iirs_result = preprocess_iirs_band(raw["iirs"]["band34"])
                 
-                # Wrap results in the expected dict format for the UI
                 st.session_state.prep_data = {
-                    "ohrc": {"image": ohrc_result.image, "meta": {"dynamic_range": ohrc_result.dynamic_range, "shadow_fraction": ohrc_result.shadow_fraction, "clip_limit": ohrc_result.clip_limit, "method": ohrc_result.method}},
-                    "tmc2": {"image": tmc_result.image, "meta": {"dynamic_range": tmc_result.dynamic_range, "shadow_fraction": tmc_result.shadow_fraction, "clip_limit": tmc_result.clip_limit, "method": tmc_result.method}},
-                    "iirs": {"image": iirs_result.image, "meta": {"dynamic_range": iirs_result.dynamic_range, "shadow_fraction": iirs_result.shadow_fraction, "clip_limit": iirs_result.clip_limit, "method": iirs_result.method}},
+                    "ohrc": ohrc_result,
+                    "tmc2": tmc_result,
+                    "iirs": iirs_result,
                 }
                 st.session_state.step = 2
                 st.rerun()
@@ -576,12 +575,20 @@ elif current_step == 2:
 
     st.markdown('<div class="animate-in-delay">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
+    
+    def get_attr(obj, attr, default=0):
+        if isinstance(obj, dict):
+            if attr == "shadow_fraction" and "saturation_fraction" in obj:
+                return obj["saturation_fraction"]
+            return obj.get(attr, default)
+        return getattr(obj, attr, default)
+        
     with c1:
-        render_image(prep["ohrc"].image, "OHRC — Shadow-Aware CLAHE")
+        render_image(get_attr(prep["ohrc"], "image"), "OHRC — " + get_attr(prep["ohrc"], "method", "Shadow-Aware CLAHE"))
     with c2:
-        render_image(prep["tmc2"].image, "TMC-2 — Percentile Stretch")
+        render_image(get_attr(prep["tmc2"], "image"), "TMC-2 — " + get_attr(prep["tmc2"], "method", "Percentile Stretch"))
     with c3:
-        render_image(prep["iirs"].image, "IIRS — PCA 1st Component")
+        render_image(get_attr(prep["iirs"], "image"), "IIRS — " + get_attr(prep["iirs"], "method", "PCA/CLAHE"))
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Quality metrics
@@ -590,20 +597,20 @@ elif current_step == 2:
     with c1:
         st.markdown(metric_card(
             "OHRC Quality",
-            f"{prep['ohrc'].dynamic_range:.0f} DN",
-            f"Shadow: {prep['ohrc'].shadow_fraction:.0%} · Clip: {prep['ohrc'].clip_limit:.1f}"
+            f"{get_attr(prep['ohrc'], 'dynamic_range'):.0f} DN",
+            f"Shadow: {get_attr(prep['ohrc'], 'shadow_fraction'):.0%} · Clip: {get_attr(prep['ohrc'], 'clip_limit'):.1f}"
         ), unsafe_allow_html=True)
     with c2:
         st.markdown(metric_card(
             "TMC-2 Quality",
-            f"{prep['tmc2'].dynamic_range:.0f} DN",
-            f"Saturation: {prep['tmc2'].saturation_fraction:.0%}"
+            f"{get_attr(prep['tmc2'], 'dynamic_range'):.0f} DN",
+            f"Shadow: {get_attr(prep['tmc2'], 'shadow_fraction'):.0%} · Clip: {get_attr(prep['tmc2'], 'clip_limit'):.1f}"
         ), unsafe_allow_html=True)
     with c3:
         st.markdown(metric_card(
             "IIRS Quality",
-            f"{prep['iirs'].dynamic_range:.0f} DN",
-            f"Shadow: {prep['iirs'].shadow_fraction:.0%}"
+            f"{get_attr(prep['iirs'], 'dynamic_range'):.0f} DN",
+            f"Shadow: {get_attr(prep['iirs'], 'shadow_fraction'):.0%} · Clip: {get_attr(prep['iirs'], 'clip_limit'):.1f}"
         ), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
