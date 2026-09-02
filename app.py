@@ -32,8 +32,8 @@ from src.module5_confidence.visualizer import ExplainabilityVisualizer
 # ─── Data file paths (auto-discovered from ./data/) ──────────────────
 DATA_ROOT = Path(__file__).resolve().parent / "data"
 
-OHRC_DIR = DATA_ROOT / "ch2_ohr_ncp_20211023T0027462822_d_img_d18"
-OHRC_IMG = OHRC_DIR / "data" / "calibrated" / "20211023" / "ch2_ohr_ncp_20211023T0027462822_d_img_d18.img"
+OHRC_DIR = DATA_ROOT / "ch2_ohr_ncp_20230920T0012433743_d_img_d18"
+OHRC_IMG = OHRC_DIR / "data" / "calibrated" / "20230920" / "ch2_ohr_ncp_20230920T0012433743_d_img_d18.img"
 OHRC_XML = OHRC_IMG.with_suffix(".xml")
 
 TMC_DIR  = DATA_ROOT / "ch2_tmc_ncn_20221205T1633075527_d_img_d32"
