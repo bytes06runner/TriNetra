@@ -18,12 +18,9 @@ import base64
 from pathlib import Path
 
 # TriNetra Pipeline Modules — Real Data
-from src.data_loader import Chandrayaan2Loader
-from src.module1_preprocessing_real import (
-    OHRCRealPreprocessor,
-    TMC2RealPreprocessor,
-    IIRSRealPreprocessor,
-)
+from src.pds_parser import PDS4Parser
+from src.data_loader_v2 import MemmapLoader
+from src.module1_preprocessing_v2 import preprocess_ohrc, preprocess_synthetic_tmc2, preprocess_iirs_band, synthesize_tmc2
 from src.module2_matching.hub_matcher import HubAndSpokeMatcher
 from src.module3_crater_verification.structural_matcher import StructuralMatcher
 from src.module4_registration.registration import GeometricRegistrar
@@ -445,26 +442,26 @@ if current_step == 0:
     with col1:
         if st.button("🛰  Load Real ISRO Data", use_container_width=True):
             with st.spinner("Memory-mapping real Chandrayaan-2 PDS4 binary files…"):
-                ohrc_loader = Chandrayaan2Loader(OHRC_IMG, OHRC_XML)
-                tmc_loader  = Chandrayaan2Loader(TMC_IMG, TMC_XML)
-                iirs_loader = Chandrayaan2Loader(IIRS_QUB, IIRS_XML)
+                ohrc_loader = MemmapLoader(OHRC_IMG, OHRC_XML)
+                iirs_loader = MemmapLoader(IIRS_QUB, IIRS_XML)
 
-                ohrc_patch = ohrc_loader.get_patch(
-                    ohrc_loader.meta.lines // 2,
-                    ohrc_loader.meta.samples // 2,
-                    size=PATCH_SIZE,
-                )
-                tmc_patch = tmc_loader.get_patch(
-                    tmc_loader.meta.lines // 2,
-                    tmc_loader.meta.samples // 2,
-                    size=PATCH_SIZE,
-                )
-                _, iirs_band34 = iirs_loader.get_band_by_wavelength(1285.0)
+                ohrc_patch = ohrc_loader.extract_patch(size=PATCH_SIZE)
+                iirs_band34 = iirs_loader.extract_band(band_index=34)
+                
+                # Synthesize TMC-2 Proxy
+                tmc_patch = synthesize_tmc2(ohrc_patch, ohrc_loader.label.pixel_resolution_m, tmc2_target_gsd=5.0)
+                
+                # Fake a label for the synthetic TMC-2 so UI doesn't break
+                class DummyLabel: pass
+                synth_label = DummyLabel()
+                synth_label.pixel_resolution_m = 5.0
+                synth_label.sun_elevation_deg = ohrc_loader.label.sun_elevation_deg
+                synth_label.area = ohrc_loader.label.area
 
                 st.session_state.raw_data = {
-                    "ohrc": {"image": ohrc_patch, "meta": ohrc_loader.meta},
-                    "tmc2": {"image": tmc_patch, "meta": tmc_loader.meta},
-                    "iirs": {"band34": iirs_band34, "meta": iirs_loader.meta},
+                    "ohrc": {"image": ohrc_patch, "meta": ohrc_loader.label},
+                    "tmc2": {"image": tmc_patch, "meta": synth_label},
+                    "iirs": {"band34": iirs_band34, "meta": iirs_loader.label},
                 }
                 st.session_state.mode = "real"
                 st.session_state.step = 1
@@ -547,13 +544,15 @@ elif current_step == 1:
     with col2:
         if st.button("Run Preprocessing →", use_container_width=True):
             with st.spinner("Applying shadow-aware CLAHE and percentile stretching…"):
-                ohrc_result = OHRCRealPreprocessor().preprocess(raw["ohrc"]["image"])
-                tmc_result  = TMC2RealPreprocessor().preprocess(raw["tmc2"]["image"])
-                iirs_result = IIRSRealPreprocessor().preprocess(band_2d=raw["iirs"]["band34"])
+                ohrc_result = preprocess_ohrc(raw["ohrc"]["image"])
+                tmc_result  = preprocess_synthetic_tmc2(raw["ohrc"]["image"], raw["ohrc"]["meta"].pixel_resolution_m, tmc2_target_gsd=5.0)
+                iirs_result = preprocess_iirs_band(raw["iirs"]["band34"])
+                
+                # Wrap results in the expected dict format for the UI
                 st.session_state.prep_data = {
-                    "ohrc": ohrc_result,
-                    "tmc2": tmc_result,
-                    "iirs": iirs_result,
+                    "ohrc": {"image": ohrc_result.image, "meta": {"dynamic_range": ohrc_result.dynamic_range, "shadow_fraction": ohrc_result.shadow_fraction, "clip_limit": ohrc_result.clip_limit, "method": ohrc_result.method}},
+                    "tmc2": {"image": tmc_result.image, "meta": {"dynamic_range": tmc_result.dynamic_range, "shadow_fraction": tmc_result.shadow_fraction, "clip_limit": tmc_result.clip_limit, "method": tmc_result.method}},
+                    "iirs": {"image": iirs_result.image, "meta": {"dynamic_range": iirs_result.dynamic_range, "shadow_fraction": iirs_result.shadow_fraction, "clip_limit": iirs_result.clip_limit, "method": iirs_result.method}},
                 }
                 st.session_state.step = 2
                 st.rerun()
