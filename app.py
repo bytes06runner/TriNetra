@@ -562,7 +562,7 @@ elif current_step == 1:
 
     col1, col2, col3 = st.columns([1.5, 1, 1.5])
     with col2:
-        
+
         st.markdown('''
         <div style="background-color: #f9f9fa; border-left: 4px solid #f66d4f; padding: 16px; border-radius: 4px; margin-top: 24px; font-size: 0.95rem; color: #333;">
             <strong>💡 Presenter's Note:</strong><br/>
@@ -570,7 +570,6 @@ elif current_step == 1:
             Here you can see the raw data extracted from the three instruments: OHRC (extremely high-res optical), TMC-2 (medium-res optical), and IIRS (low-res hyperspectral). The IIRS data originally has 256 invisible infrared bands, but we extract a single band here to visualize it.
         </div>
         ''', unsafe_allow_html=True)
-
         if st.button("Run Preprocessing →", use_container_width=True):
             with st.spinner("Applying shadow-aware CLAHE and percentile stretching…"):
                 ohrc_result = preprocess_ohrc(raw["ohrc"]["image"])
@@ -656,16 +655,15 @@ elif current_step == 2:
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         else:
-            
-        st.markdown('''
-        <div style="background-color: #f9f9fa; border-left: 4px solid #f66d4f; padding: 16px; border-radius: 4px; margin-top: 24px; font-size: 0.95rem; color: #333;">
-            <strong>💡 Presenter's Note:</strong><br/>
-            The Lunar South Pole is notorious for extreme lighting conditions—deep, pitch-black shadows and blown-out bright highlights. If we feed raw images into a feature matcher, it will fail.<br/><br/>
-            In this stage, we apply <strong>Shadow-Aware CLAHE</strong> (Contrast Limited Adaptive Histogram Equalization). This algorithm dynamically lifts the contrast inside the pitch-black craters without oversaturating the bright rims.<br/><br/>
-            You can also see the 'Dynamic Range' metric, which is measured in DN (Digital Numbers). Our data is 12-bit (0 to 4095 DN). The preprocessing ensures we maximize this bit-depth to pull out the most structural information possible for the next step.
-        </div>
-        ''', unsafe_allow_html=True)
 
+            st.markdown('''
+            <div style="background-color: #f9f9fa; border-left: 4px solid #f66d4f; padding: 16px; border-radius: 4px; margin-top: 24px; font-size: 0.95rem; color: #333;">
+                <strong>💡 Presenter's Note:</strong><br/>
+                The Lunar South Pole is notorious for extreme lighting conditions—deep, pitch-black shadows and blown-out bright highlights. If we feed raw images into a feature matcher, it will fail.<br/><br/>
+                In this stage, we apply <strong>Shadow-Aware CLAHE</strong> (Contrast Limited Adaptive Histogram Equalization). This algorithm dynamically lifts the contrast inside the pitch-black craters without oversaturating the bright rims.<br/><br/>
+                You can also see the 'Dynamic Range' metric, which is measured in DN (Digital Numbers). Our data is 12-bit (0 to 4095 DN). The preprocessing ensures we maximize this bit-depth to pull out the most structural information possible for the next step.
+            </div>
+            ''', unsafe_allow_html=True)
             if st.button("Run Structural Matching →", use_container_width=True):
                 with st.spinner("Extracting Hessian ridges and executing Hub-and-Spoke matching…"):
                     from src.module2_matching.orb_fallback_matcher import ORBFallbackMatcher
@@ -732,7 +730,7 @@ elif current_step == 3:
 
     col1, col2, col3 = st.columns([1.5, 1, 1.5])
     with col2:
-        
+
         st.markdown('''
         <div style="background-color: #f9f9fa; border-left: 4px solid #f66d4f; padding: 16px; border-radius: 4px; margin-top: 24px; font-size: 0.95rem; color: #333;">
             <strong>💡 Presenter's Note:</strong><br/>
@@ -741,7 +739,6 @@ elif current_step == 3:
             What you are seeing here are the structural keypoints—craters, ridges, and boulders. We extract these using an Illumination-Invariant Hessian ridge detector, which completely ignores shadows and focuses only on physical topography. The green lines represent verified, highly confident geometric matches between the two vastly different scales.
         </div>
         ''', unsafe_allow_html=True)
-
         if st.button("Run Geometric Registration →", use_container_width=True):
             with st.spinner("Computing MAGSAC++ homography…"):
                 registrar = GeometricRegistrar(transform_type="homography")
@@ -801,16 +798,15 @@ elif current_step == 4:
         st.image(overlay_path, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    
-        st.markdown('''
-        <div style="background-color: #f9f9fa; border-left: 4px solid #f66d4f; padding: 16px; border-radius: 4px; margin-top: 24px; font-size: 0.95rem; color: #333;">
-            <strong>💡 Presenter's Note:</strong><br/>
-            Finally, we take all those matching keypoints and calculate a mathematical transformation called a <strong>Homography</strong>. We use a robust outlier-rejection algorithm called MAGSAC++ to filter out any false matches.<br/><br/>
-            Using this homography, we warp the OHRC image so it perfectly aligns with the target frame. To prove it worked, we overlaid them into a single image. The red channel is the warped OHRC, and the cyan channel is the target image.<br/><br/>
-            As you can see, where the craters and ridges align perfectly, the red and cyan cancel out to form greyscale/white. This pixel-perfect alignment proves that our scale-invariant and sun-angle-invariant pipeline is highly successful!
-        </div>
-        ''', unsafe_allow_html=True)
 
+    st.markdown('''
+    <div style="background-color: #f9f9fa; border-left: 4px solid #f66d4f; padding: 16px; border-radius: 4px; margin-top: 24px; font-size: 0.95rem; color: #333;">
+        <strong>💡 Presenter's Note:</strong><br/>
+        Finally, we take all those matching keypoints and calculate a mathematical transformation called a <strong>Homography</strong>. We use a robust outlier-rejection algorithm called MAGSAC++ to filter out any false matches.<br/><br/>
+        Using this homography, we warp the OHRC image so it perfectly aligns with the target frame. To prove it worked, we overlaid them into a single image. The red channel is the warped OHRC, and the cyan channel is the target image.<br/><br/>
+        As you can see, where the craters and ridges align perfectly, the red and cyan cancel out to form greyscale/white. This pixel-perfect alignment proves that our scale-invariant and sun-angle-invariant pipeline is highly successful!
+    </div>
+    ''', unsafe_allow_html=True)
     st.markdown("---")
 
     # Restart
