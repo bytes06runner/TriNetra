@@ -33,24 +33,33 @@ class ExplainabilityVisualizer:
         save_path: Optional[str] = None,
         title: str = "Feature Matches"
     ) -> None:
-        """Plot side-by-side matches with lines connecting keypoints."""
+        """Plot side-by-side matches. Scales the smaller image to match the height of the larger image
+        so the visualization is readable across massive scale gaps (e.g. 320x)."""
         if img_src.ndim == 2:
             img_src = cv2.cvtColor((img_src * 255).astype(np.uint8), cv2.COLOR_GRAY2RGB)
         if img_dst.ndim == 2:
             img_dst = cv2.cvtColor((img_dst * 255).astype(np.uint8), cv2.COLOR_GRAY2RGB)
 
+        h1, w1 = img_src.shape[:2]
+        h2, w2 = img_dst.shape[:2]
+        
+        # Scale img_dst to match height of img_src
+        target_h = h1
+        scale_factor = target_h / float(h2) if h2 > 0 else 1.0
+        target_w = int(w2 * scale_factor)
+        
+        img_dst_scaled = cv2.resize(img_dst, (target_w, target_h), interpolation=cv2.INTER_NEAREST)
+        
         # Convert to cv2 KeyPoints and DMatches format for drawMatches
         kps_src = [cv2.KeyPoint(x=float(pt[0]), y=float(pt[1]), size=1) for pt in match_result.keypoints_src]
-        kps_dst = [cv2.KeyPoint(x=float(pt[0]), y=float(pt[1]), size=1) for pt in match_result.keypoints_dst]
+        kps_dst = [cv2.KeyPoint(x=float(pt[0]*scale_factor), y=float(pt[1]*scale_factor), size=1) for pt in match_result.keypoints_dst]
         
         matches = [cv2.DMatch(_queryIdx=i, _trainIdx=i, _distance=0) for i in range(len(kps_src))]
 
-        # Separate inliers and outliers if mask is provided
         if inliers_mask is not None:
-            # Draw outliers in red, inliers in green
             matches_mask = [int(bool_val) for bool_val in inliers_mask]
-            match_color = (0, 255, 0) # Green for inliers
-            single_point_color = (255, 0, 0) # Red for outliers
+            match_color = (0, 255, 0)
+            single_point_color = (255, 0, 0)
         else:
             matches_mask = None
             match_color = (0, 255, 0)
@@ -58,7 +67,7 @@ class ExplainabilityVisualizer:
 
         img_matches = cv2.drawMatches(
             img_src, kps_src,
-            img_dst, kps_dst,
+            img_dst_scaled, kps_dst,
             matches, None,
             matchColor=match_color,
             singlePointColor=single_point_color,
@@ -68,7 +77,7 @@ class ExplainabilityVisualizer:
 
         plt.figure(figsize=(15, 8))
         plt.imshow(img_matches)
-        plt.title(f"{title} ({match_result.src_instrument} ↔ {match_result.dst_instrument})")
+        plt.title(f"{title} ({match_result.src_instrument} ↔ {match_result.dst_instrument} - Target scaled by {scale_factor:.1f}x)")
         plt.axis('off')
         
         if save_path:
