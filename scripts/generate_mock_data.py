@@ -130,12 +130,8 @@ class MockLunarDataGenerator:
             if max_h > 0:
                 height /= max_h
             
-            # --- Inject high-frequency texture (micro-craters and boulders) ---
-            # Real feature matchers (ORB/SIFT) need corners, not just smooth gradients.
-            hf_noise = self.rng.normal(0, 0.05, (self.base_size, self.base_size))
-            # Create sharp speckles
-            hf_noise = np.where(hf_noise > 0.1, hf_noise * 5, hf_noise)
-            height += hf_noise
+            # No high-frequency white noise here; it destroys the normals.
+            # Albedo texture will provide the necessary corners.
 
             self._heightmap = np.clip(height, 0, 1)
             
@@ -220,7 +216,9 @@ class MockLunarDataGenerator:
         Applies Lambertian illumination model.
         """
         try:
-            gy, gx = np.gradient(heightmap, self.base_gsd, self.base_gsd)
+            # heightmap is normalized to [0, 1], but it represents a 4km area
+            # Scale the gradient so it looks like a rugged terrain with 400m elevation diff
+            gy, gx = np.gradient(heightmap * 400.0, self.base_gsd, self.base_gsd)
             normal = np.dstack((-gx, -gy, np.ones_like(heightmap)))
             norm = np.linalg.norm(normal, axis=2, keepdims=True)
             norm[norm == 0] = 1.0
