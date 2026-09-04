@@ -472,7 +472,27 @@ if current_step == 0:
             with st.spinner("Generating physically consistent synthetic terrain…"):
                 from scripts.generate_mock_data import MockLunarDataGenerator
                 gen = MockLunarDataGenerator(seed=42)
-                st.session_state.raw_data = gen.generate_all()
+                demo_data = gen.generate_all()
+                
+                class DummyLabel: pass
+                
+                def make_dummy(gsd):
+                    dl = DummyLabel()
+                    dl.pixel_resolution_m = gsd
+                    dl.sun_elevation_deg = 30.0
+                    dl.area = "Simulated"
+                    return dl
+                
+                # IIRS in demo_data is returned as 'cube' and we need 'band34'
+                # Let's just grab the middle band
+                iirs_cube = demo_data["iirs"]["cube"]
+                iirs_band = iirs_cube[:, :, iirs_cube.shape[2] // 2]
+                
+                st.session_state.raw_data = {
+                    "ohrc": {"image": demo_data["ohrc"]["image"], "meta": make_dummy(demo_data["ohrc"]["gsd_m"])},
+                    "tmc2": {"image": demo_data["tmc2"]["image"], "meta": make_dummy(demo_data["tmc2"]["gsd_m"])},
+                    "iirs": {"band34": iirs_band, "meta": make_dummy(demo_data["iirs"]["gsd_m"])},
+                }
                 st.session_state.mode = "demo"
                 st.session_state.step = 1
                 st.rerun()
