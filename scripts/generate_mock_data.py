@@ -276,7 +276,7 @@ class MockLunarDataGenerator:
                 ohrc_img = np.zeros((1, 1), dtype=np.float32)
                 
             noise = self.rng.normal(0, 0.005, ohrc_img.shape)
-            ohrc_img = np.clip(ohrc_img + noise, 0, 1).astype(np.float32)
+            ohrc_img = np.clip((ohrc_img + noise) * 4095.0, 0, 4095).astype(np.uint16)
             
             extent_m = self.OHRC_GSD * ohrc_img.shape[0]
             half_ext = extent_m / 2.0
@@ -310,11 +310,12 @@ class MockLunarDataGenerator:
             
             if target_size > 0:
                 tmc_img = cv2.resize(illuminated, (target_size, target_size), interpolation=cv2.INTER_AREA)
+                tmc_img = np.clip(tmc_img * 4095.0, 0, 4095).astype(np.uint16)
             else:
                 tmc_img = np.zeros((1, 1), dtype=np.float32)
                 
             noise = self.rng.normal(0, 0.01, tmc_img.shape)
-            tmc_img = np.clip(tmc_img + noise, 0, 1).astype(np.float32)
+            tmc_img = np.clip((tmc_img + noise) * 4095.0, 0, 4095).astype(np.uint16)
             
             extent_m = self.TMC2_GSD * tmc_img.shape[0]
             half_ext = extent_m / 2.0
@@ -375,13 +376,13 @@ class MockLunarDataGenerator:
                 
                 noise = self.rng.normal(0, 0.008, ill_small.shape)
                 band_img = ill_small * refl + noise
-                cube[:, :, b_idx] = np.clip(band_img, 0, 1)
+                cube[:, :, b_idx] = np.clip(band_img * 4095.0, 0, 4095).astype(np.uint16)
                 
             extent_m = self.IIRS_GSD * target_size
             half_ext = extent_m / 2.0
             
             return {
-                'cube': cube.astype(np.float32),
+                'cube': cube.astype(np.uint16),
                 'band_centers_um': bands.tolist(),
                 'gsd_m': self.IIRS_GSD,
                 'instrument': 'IIRS',
@@ -390,7 +391,7 @@ class MockLunarDataGenerator:
             }
         except Exception:
             return {
-                'cube': np.zeros((1, 1, self.IIRS_BANDS), dtype=np.float32),
+                'cube': np.zeros((1, 1, self.IIRS_BANDS), dtype=np.uint16),
                 'band_centers_um': np.linspace(0.8, 5.0, self.IIRS_BANDS).tolist(),
                 'gsd_m': self.IIRS_GSD,
                 'instrument': 'IIRS',
