@@ -310,7 +310,6 @@ class MockLunarDataGenerator:
             
             if target_size > 0:
                 tmc_img = cv2.resize(illuminated, (target_size, target_size), interpolation=cv2.INTER_AREA)
-                tmc_img = np.clip(tmc_img * 4095.0, 0, 4095).astype(np.uint16)
             else:
                 tmc_img = np.zeros((1, 1), dtype=np.float32)
                 
