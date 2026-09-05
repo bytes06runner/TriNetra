@@ -16,7 +16,10 @@ from pathlib import Path
 from typing import Any, Dict, Tuple, Union
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 from scipy.spatial import cKDTree
 
 logger = logging.getLogger(__name__)

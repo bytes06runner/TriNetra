@@ -211,7 +211,48 @@ def render_image(arr: np.ndarray, title: str = "", cmap: str = "bone"):
     st.image(buf, use_container_width=True)
 
 
+# ─── Cache Pre-loader Helper ───────────────────────────────────────────
+def load_real_data_cache():
+    """Load real Chandrayaan-2 north polar overlapping pair from repository cache."""
+    if CACHE_NPZ.exists():
+        data_npz = np.load(CACHE_NPZ, allow_pickle=True)
+        tmc_crop_u8 = data_npz["tmc_crop"]
+        iirs_grey = data_npz["iirs_grey"]
+        tmc_down = cv2.resize(tmc_crop_u8, (iirs_grey.shape[1], iirs_grey.shape[0]), interpolation=cv2.INTER_AREA)
+
+        p_1500 = data_npz["iirs_proxy_1500nm"] if "iirs_proxy_1500nm" in data_npz else iirs_grey
+        p_3band = data_npz["iirs_proxy_3band_mean"] if "iirs_proxy_3band_mean" in data_npz else iirs_grey
+        p_pc1 = data_npz["iirs_proxy_pc1"] if "iirs_proxy_pc1" in data_npz else iirs_grey
+
+        common = {
+            "center_lat": float(data_npz["center_lat"]),
+            "center_lon": float(data_npz["center_lon"]),
+            "min_distance_km": float(data_npz["min_dist_m"]) / 1000.0,
+            "a": {"center_scan": int(data_npz["tmc_scan"])},
+            "b": {"center_scan": int(data_npz["iir_scan"])},
+        }
+
+        return {
+            "tmc_full": tmc_crop_u8,
+            "tmc_down": tmc_down,
+            "iirs_band_avg": iirs_grey,
+            "iirs_1500nm": p_1500,
+            "iirs_3band": p_3band,
+            "iirs_pc1": p_pc1,
+            "tmc_res": float(data_npz["tmc_res"]),
+            "iir_res": float(data_npz["iir_res"]),
+            "sun_el": float(data_npz["sun_el"]),
+        }, common
+    return None, None
+
+
 # ─── Session State Initialization ─────────────────────────────────────
+# Purge legacy keys from previous sessions (OHRC synthetic pipeline)
+legacy_keys = ["ohrc", "reg_result", "match_result", "synthetic", "homography", "inliers", "rmse", "stage", "mosaic"]
+for k in legacy_keys:
+    if k in st.session_state:
+        del st.session_state[k]
+
 defaults = {
     "step": 0,
     "mode": "real",
@@ -223,6 +264,16 @@ defaults = {
 for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
+
+# Pre-load cache if raw_data is not yet initialized so all steps function smoothly
+if st.session_state.raw_data is None:
+    cached_raw, cached_common = load_real_data_cache()
+    if cached_raw is not None:
+        st.session_state.raw_data = cached_raw
+        st.session_state.common_info = cached_common
+
+if st.session_state.step not in [0, 1, 2, 3, 4]:
+    st.session_state.step = 0
 
 current_step = st.session_state.step
 
@@ -258,6 +309,30 @@ with st.sidebar:
             st.markdown(stage_pill(label, "active"), unsafe_allow_html=True)
         else:
             st.markdown(stage_pill(label, "pending"), unsafe_allow_html=True)
+
+    st.markdown("<br/>", unsafe_allow_html=True)
+    st.markdown('<p style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#999; margin-bottom:0.4rem;">Stage Navigation</p>', unsafe_allow_html=True)
+    nav_c1, nav_c2 = st.columns(2)
+    with nav_c1:
+        if st.button("🏠 Hero", key="btn_nav_0", use_container_width=True):
+            st.session_state.step = 0
+            st.rerun()
+    with nav_c2:
+        if st.button("🛰 Stage 1", key="btn_nav_1", use_container_width=True):
+            st.session_state.step = 1
+            st.rerun()
+    nav_c3, nav_c4 = st.columns(2)
+    with nav_c3:
+        if st.button("🧪 Stage 2", key="btn_nav_2", use_container_width=True):
+            st.session_state.step = 2
+            st.rerun()
+    with nav_c4:
+        if st.button("🛑 Stage 3", key="btn_nav_3", use_container_width=True):
+            st.session_state.step = 3
+            st.rerun()
+    if st.button("📋 Presenter Briefing", key="btn_nav_4", use_container_width=True):
+        st.session_state.step = 4
+        st.rerun()
 
     st.markdown("---")
     st.markdown("""
@@ -365,37 +440,14 @@ if current_step == 0:
                     st.rerun()
 
                 elif CACHE_NPZ.exists():
-                    data_npz = np.load(CACHE_NPZ, allow_pickle=True)
-                    tmc_crop_u8 = data_npz["tmc_crop"]
-                    iirs_grey = data_npz["iirs_grey"]
-                    tmc_down = cv2.resize(tmc_crop_u8, (iirs_grey.shape[1], iirs_grey.shape[0]), interpolation=cv2.INTER_AREA)
-
-                    p_1500 = data_npz["iirs_proxy_1500nm"] if "iirs_proxy_1500nm" in data_npz else iirs_grey
-                    p_3band = data_npz["iirs_proxy_3band_mean"] if "iirs_proxy_3band_mean" in data_npz else iirs_grey
-                    p_pc1 = data_npz["iirs_proxy_pc1"] if "iirs_proxy_pc1" in data_npz else iirs_grey
-
-                    common = {
-                        "center_lat": float(data_npz["center_lat"]),
-                        "center_lon": float(data_npz["center_lon"]),
-                        "min_distance_km": float(data_npz["min_dist_m"]) / 1000.0,
-                        "a": {"center_scan": int(data_npz["tmc_scan"])},
-                        "b": {"center_scan": int(data_npz["iir_scan"])},
-                    }
-
-                    st.session_state.raw_data = {
-                        "tmc_full": tmc_crop_u8,
-                        "tmc_down": tmc_down,
-                        "iirs_band_avg": iirs_grey,
-                        "iirs_1500nm": p_1500,
-                        "iirs_3band": p_3band,
-                        "iirs_pc1": p_pc1,
-                        "tmc_res": float(data_npz["tmc_res"]),
-                        "iir_res": float(data_npz["iir_res"]),
-                        "sun_el": float(data_npz["sun_el"]),
-                    }
-                    st.session_state.common_info = common
-                    st.session_state.step = 1
-                    st.rerun()
+                    cached_raw, cached_common = load_real_data_cache()
+                    if cached_raw is not None:
+                        st.session_state.raw_data = cached_raw
+                        st.session_state.common_info = cached_common
+                        st.session_state.step = 1
+                        st.rerun()
+                    else:
+                        st.error("Failed to unpack cache archive.")
                 else:
                     st.error("No real flight products found on disk or in repository cache.")
 
