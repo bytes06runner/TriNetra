@@ -256,25 +256,73 @@ def load_tmc2(
     return mmap, meta
 
 
+
+def parse_envi_header(hdr_path: Union[str, Path]) -> Dict[str, Any]:
+    """Parse an ENVI header file (.hdr) and extract dimensional and layout metadata.
+
+    Returns a dict with:
+        samples (int), lines (int), bands (int), header_offset (int),
+        file_type (str), data_type (int), interleave (str: 'bsq', 'bil', 'bip'),
+        byte_order (int: 0 for little-endian, 1 for big-endian).
+    """
+    path = Path(hdr_path).resolve()
+    if not path.exists():
+        raise FileNotFoundError(f"ENVI header file not found at {path}")
+
+    info: Dict[str, Any] = {
+        "samples": 0,
+        "lines": 0,
+        "bands": 0,
+        "header_offset": 0,
+        "file_type": "ENVI Standard",
+        "data_type": 4,
+        "interleave": "bsq",
+        "byte_order": 0,
+    }
+
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+            if not line or "=" not in line:
+                continue
+            key, val = [part.strip() for part in line.split("=", 1)]
+            key_lower = key.lower().replace(" ", "_")
+            val_lower = val.lower()
+
+            if key_lower in ("samples", "lines", "bands", "header_offset", "data_type", "byte_order"):
+                try:
+                    info[key_lower] = int(val)
+                except ValueError:
+                    pass
+            elif key_lower in ("interleave", "file_type"):
+                info[key_lower] = val_lower
+
+    return info
+
+
 def load_iirs(
     qub_path: Union[str, Path],
     xml_path: Union[str, Path],
+    hdr_path: Optional[Union[str, Path]] = None,
 ) -> Tuple[np.memmap, Dict[str, Any]]:
     """Open a Chandrayaan-2 IIRS hyperspectral cube using zero-copy memory mapping.
 
-    IIRS is stored as a headerless 3D binary cube at offset 0 with
-    dtype '<f4' (IEEE754LSBSingle, 32-bit float little endian).
-    The storage order is Band-Sequential (BSQ): (bands, lines, samples).
+    IIRS is stored as a 3D binary cube at offset 0 with dtype '<f4'
+    (IEEE754LSBSingle, 32-bit float little endian).
+    If an ENVI .hdr header is present, its interleave definition takes precedence:
+      - 'bsq' -> shape (bands, lines, samples)
+      - 'bil' -> shape (lines, bands, samples)
 
     Args:
         qub_path: Path to the .qub binary file.
         xml_path: Path to the corresponding .xml PDS4 label.
+        hdr_path: Optional path to the .hdr ENVI header file. If None, auto-checks qub_path.with_suffix('.hdr').
 
     Returns:
-        (memmap_array, metadata_dict) where memmap_array has shape (bands, lines, samples).
+        (memmap_array, metadata_dict).
 
     Raises:
-        ValueError: If bands * lines * samples * 4 != file_size from label.
+        ValueError: If file size does not match expected byte count.
         FileNotFoundError: If files do not exist.
     """
     qub_p = Path(qub_path).resolve()
@@ -288,7 +336,29 @@ def load_iirs(
     if len(elements) < 3:
         raise ValueError(f"Expected 3 axes in IIRS label, got {elements}")
 
-    bands, lines, samples = elements[0], elements[1], elements[2]
+    # Inspect ENVI header if present
+    h_p = Path(hdr_path).resolve() if hdr_path else qub_p.with_suffix(".hdr")
+    interleave = "bsq"
+    if h_p.exists():
+        envi_info = parse_envi_header(h_p)
+        meta["envi"] = envi_info
+        interleave = envi_info.get("interleave", "bsq").lower()
+        samples = envi_info["samples"]
+        lines = envi_info["lines"]
+        bands = envi_info["bands"]
+        dtype_num = envi_info["data_type"]
+        byte_order = envi_info["byte_order"]
+
+        print(f"ENVI Header Analysis for {qub_p.name}:")
+        print(f"  Samples:    {samples}")
+        print(f"  Lines:      {lines}")
+        print(f"  Bands:      {bands}")
+        print(f"  Interleave: {interleave}")
+        print(f"  Data Type:  {dtype_num} (float32)")
+        print(f"  Byte Order: {byte_order} ({'Little-Endian' if byte_order == 0 else 'Big-Endian'})")
+    else:
+        bands, lines, samples = elements[0], elements[1], elements[2]
+
     expected_bytes = bands * lines * samples * 4
     actual_file_size = meta["file_size"]
 
@@ -305,13 +375,20 @@ def load_iirs(
             f"{actual_file_size} bytes specified in XML label."
         )
 
-    dtype = meta["numpy_dtype"]
-    if dtype != "<f4":
-        logger.warning("Expected '<f4' for IIRS, found '%s' in label.", dtype)
+    # Determine memmap shape based on interleave
+    if interleave == "bil":
+        shape = (lines, bands, samples)
+    else:
+        # BSQ (default)
+        shape = (bands, lines, samples)
 
-    # Open with zero-copy read-only memory map (Band-Sequential)
-    mmap = np.memmap(str(qub_p), dtype="<f4", mode="r", shape=(bands, lines, samples))
-    logger.info("Loaded IIRS memmap: shape=%s, dtype=%s from %s", mmap.shape, mmap.dtype, qub_p.name)
+    meta["interleave"] = interleave
+    meta["shape"] = shape
+    print(f"  Configured Memmap Layout: {interleave.upper()} with shape {shape}")
+
+    # Open with zero-copy read-only memory map
+    mmap = np.memmap(str(qub_p), dtype="<f4", mode="r", shape=shape)
+    logger.info("Loaded IIRS memmap: layout=%s, shape=%s, dtype=%s from %s", interleave.upper(), mmap.shape, mmap.dtype, qub_p.name)
 
     return mmap, meta
 
@@ -322,71 +399,263 @@ def iirs_to_grey(
     line_slice: slice,
     sample_slice: slice,
     max_nm: float = 2000.0,
+    save_diagnostics: bool = False,
+    diag_dir: Union[str, Path] = "outputs",
+    interleave: str = "bsq",
 ) -> np.ndarray:
     """Generate a 2D visible-proxy grayscale image from an IIRS hyperspectral cube.
 
-    CRITICAL PHYSICAL CONSTRAINTS:
-    Bands with center wavelengths above 2000 nm are dominated by thermal emission
-    from the lunar regolith rather than reflected solar radiation. Including
-    thermal emission produces an inverted/distorted radiometric signal that destroys
-    cross-modal structural correspondence with visible optical sensors.
-
-    Therefore, this function:
-    1. Selects only bands where center wavelength <= max_nm (bands 1-77, up to 1993.1 nm).
-    2. Slices ONLY the requested line and sample window directly from the memory map.
-       The full 2.4 GB cube is NEVER materialized into RAM.
-    3. Averages the selected reflected-solar bands across axis 0.
-    4. Applies percentile clipping at 2% and 98% and scales to uint8 [0, 255].
+    PHYSICAL PIPELINE:
+    1. Slice sub-window directly from memmap first.
+    2. Select bands with center wavelength below max_nm (<= 2000.0 nm).
+    3. Per-band normalization: divide each band by its spatial mean so each band
+       contributes equally regardless of solar spectral shape or detector responsivity.
+    4. Column destriping: for each detector column (sample axis), compute its median
+       across lines and normalize so all columns share a common median (standard pushbroom correction).
+    5. Average normalized, destriped bands.
+    6. Normalize to uint8 with 2/98 percentile clipping.
 
     Args:
-        cube: 3D array or memmap of shape (bands, lines, samples).
+        cube: 3D array or memmap. Shape depends on interleave:
+              - 'bsq': (bands, lines, samples)
+              - 'bil': (lines, bands, samples)
         band_wavelengths: List of (band_number, center_wavelength_nm) pairs.
         line_slice: Slice for lines (e.g. slice(line0, line1)).
         sample_slice: Slice for samples (e.g. slice(samp0, samp1)).
         max_nm: Maximum cutoff wavelength in nanometers (default 2000.0 nm).
+        save_diagnostics: If True, saves four diagnostic PNGs.
+        diag_dir: Directory to save diagnostic PNGs.
+        interleave: 'bsq' or 'bil'.
 
     Returns:
         2D uint8 numpy array of shape (line_len, sample_len).
     """
-    # Identify indices of bands with wavelength <= max_nm
-    # band_wavelengths is 1-indexed in band_number, but index in array is 0-indexed
+    # 1 & 2: Select bands <= max_nm
     selected_indices: List[int] = []
     for idx, (band_num, wl_nm) in enumerate(band_wavelengths):
         if wl_nm <= max_nm:
             selected_indices.append(idx)
 
+    total_bands = cube.shape[0] if interleave == "bsq" else cube.shape[1]
     if not selected_indices:
-        # Fallback: if no wavelength info or metadata missing, take first 77 bands
         logger.warning("No bands matched <= %f nm; falling back to first 77 bands.", max_nm)
-        selected_indices = list(range(min(77, cube.shape[0])))
+        selected_indices = list(range(min(77, total_bands)))
 
-    # Slice only the requested sub-cube from memmap
-    # If selected_indices is contiguous from 0 to K, slice directly for maximum speed
     k = len(selected_indices)
-    is_contiguous_prefix = (selected_indices == list(range(k)))
 
-    if is_contiguous_prefix:
-        sub_cube = cube[:k, line_slice, sample_slice]
+    # Slice sub-cube first from memmap
+    if interleave == "bsq":
+        if selected_indices == list(range(k)):
+            sub_raw = cube[:k, line_slice, sample_slice]
+        else:
+            sub_raw = cube[selected_indices, line_slice, sample_slice]
+        sub = np.asarray(sub_raw, dtype=np.float32)
+    elif interleave == "bil":
+        if selected_indices == list(range(k)):
+            sub_raw = cube[line_slice, :k, sample_slice]
+        else:
+            sub_raw = cube[line_slice, selected_indices, sample_slice]
+        sub = np.transpose(np.asarray(sub_raw, dtype=np.float32), (1, 0, 2))
     else:
-        sub_cube = cube[selected_indices, line_slice, sample_slice]
+        raise ValueError(f"Unsupported interleave: {interleave}")
 
-    # Convert to float32 in memory and average across bands
-    sub_cube_f32 = np.asarray(sub_cube, dtype=np.float32)
-    mean_img = np.nanmean(sub_cube_f32, axis=0)
+    # Replace NaNs/Infs from dead detector pixels
+    sub = np.nan_to_num(sub, nan=0.0, posinf=0.0, neginf=0.0)
 
-    # Robust percentile normalization to uint8 [0, 255]
-    # Handle NaN or Inf if present in detector dead pixels
-    mean_img = np.nan_to_num(mean_img, nan=0.0, posinf=0.0, neginf=0.0)
+    # Raw band-77 slice (band index 76 or the last selected sub-2000nm band)
+    raw_band77 = sub[-1].copy()
 
-    p2, p98 = np.percentile(mean_img, (2.0, 98.0))
-    spread = p98 - p2
+    # 3: Per-band normalization: divide each band by its own spatial mean
+    band_means = np.nanmean(sub, axis=(1, 2), keepdims=True)
+    band_means = np.where(np.abs(band_means) > 1e-8, band_means, 1.0)
+    norm_bands = sub / band_means
 
-    if spread > 1e-6:
-        norm = np.clip((mean_img - p2) / spread * 255.0, 0, 255).astype(np.uint8)
+    norm_avg_before = np.nanmean(norm_bands, axis=0)
+
+    # 4: Column destriping: pushbroom stripe correction
+    # For each detector column (sample axis = axis 2), compute median across lines (axis 1)
+    col_meds = np.nanmedian(norm_bands, axis=1, keepdims=True)  # (B, 1, W)
+    common_meds = np.nanmedian(col_meds, axis=2, keepdims=True) # (B, 1, 1)
+    col_safe = np.where(np.abs(col_meds) > 1e-6, col_meds, 1.0)
+    destriped_bands = norm_bands * (common_meds / col_safe)
+
+    # 5: Average normalized, destriped bands
+    avg_destriped = np.nanmean(destriped_bands, axis=0)
+    # Composite destripe pass to align column medians across the average
+    col_med_comp = np.nanmedian(avg_destriped, axis=0, keepdims=True)
+    common_med_comp = np.nanmedian(col_med_comp)
+    col_safe_comp = np.where(np.abs(col_med_comp) > 1e-6, col_med_comp, 1.0)
+    avg_destriped = avg_destriped * (common_med_comp / col_safe_comp)
+
+    # Column standard deviation metrics (measuring cross-column striping noise)
+    std_cols_before = float(np.std(np.nanmedian(norm_avg_before, axis=0)))
+    std_cols_after = float(np.std(np.nanmedian(avg_destriped, axis=0)))
+    print(f"Standard deviation along columns before destriping: {std_cols_before:.6f}")
+    print(f"Standard deviation along columns after destriping:  {std_cols_after:.6f}")
+
+    # 6: Normalize to uint8 with 2/98 percentile clipping
+    p2, p98 = np.percentile(avg_destriped, (2.0, 98.0))
+    if p98 - p2 > 1e-6:
+        final_proxy = np.clip((avg_destriped - p2) / (p98 - p2) * 255.0, 0, 255).astype(np.uint8)
     else:
-        norm = np.zeros_like(mean_img, dtype=np.uint8)
+        final_proxy = np.zeros_like(avg_destriped, dtype=np.uint8)
 
-    return norm
+    # Save diagnostic images if requested
+    if save_diagnostics:
+        import cv2
+        out_p = Path(diag_dir)
+        out_p.mkdir(parents=True, exist_ok=True)
+
+        def _to_u8(arr: np.ndarray) -> np.ndarray:
+            lo, hi = np.percentile(arr, (2.0, 98.0))
+            if hi - lo > 1e-6:
+                return np.clip((arr - lo) / (hi - lo) * 255.0, 0, 255).astype(np.uint8)
+            return np.zeros_like(arr, dtype=np.uint8)
+
+        p1 = out_p / "iirs_diag_raw_band77.png"
+        p2_f = out_p / "iirs_diag_perband_norm_avg.png"
+        p3 = out_p / "iirs_diag_after_destriping.png"
+        p4 = out_p / "iirs_diag_final_proxy.png"
+
+        cv2.imwrite(str(p1), _to_u8(raw_band77))
+        cv2.imwrite(str(p2_f), _to_u8(norm_avg_before))
+        cv2.imwrite(str(p3), _to_u8(avg_destriped))
+        cv2.imwrite(str(p4), final_proxy)
+        print(f"Saved 4 diagnostic PNGs to {out_p.resolve()}:")
+        print(f"  - {p1.name}")
+        print(f"  - {p2_f.name}")
+        print(f"  - {p3.name}")
+        print(f"  - {p4.name}")
+
+    return final_proxy
+
+
+def iirs_proxy_variants(
+    cube: Union[np.ndarray, np.memmap],
+    band_wavelengths: List[Tuple[int, float]],
+    line_slice: slice,
+    sample_slice: slice,
+    save_dir: Union[str, Path] = "outputs",
+    interleave: str = "bsq",
+) -> Dict[str, np.ndarray]:
+    """Produce three alternative IIRS visible proxy variants from the same window, all destriped:
+    1. Single band nearest 1500 nm
+    2. Mean of bands nearest 950, 1500 and 1700 nm
+    3. First principal component (PC1) across the sub-2000 nm bands
+
+    Args:
+        cube: 3D array or memmap.
+        band_wavelengths: List of (band_number, center_wavelength_nm) pairs.
+        line_slice: Slice for lines.
+        sample_slice: Slice for samples.
+        save_dir: Directory to save the 3 variant PNGs.
+        interleave: 'bsq' or 'bil'.
+
+    Returns:
+        Dict mapping variant name to uint8 proxy image:
+        {'single_1500nm': img, 'mean_3band': img, 'pc1': img}
+    """
+    import cv2
+    out_p = Path(save_dir)
+    out_p.mkdir(parents=True, exist_ok=True)
+
+    def _destripe_2d(arr: np.ndarray) -> np.ndarray:
+        col_med = np.nanmedian(arr, axis=0, keepdims=True)
+        common_med = np.nanmedian(col_med)
+        col_safe = np.where(np.abs(col_med) > 1e-6, col_med, 1.0)
+        return arr * (common_med / col_safe)
+
+    def _to_u8(arr: np.ndarray) -> np.ndarray:
+        p2, p98 = np.percentile(arr, (2.0, 98.0))
+        if p98 - p2 > 1e-6:
+            return np.clip((arr - p2) / (p98 - p2) * 255.0, 0, 255).astype(np.uint8)
+        return np.zeros_like(arr, dtype=np.uint8)
+
+    def _get_band_slice(idx: int) -> np.ndarray:
+        if interleave == "bsq":
+            return np.asarray(cube[idx, line_slice, sample_slice], dtype=np.float32)
+        else:
+            return np.asarray(cube[line_slice, idx, sample_slice], dtype=np.float32)
+
+    # 1. Single band nearest 1500 nm
+    idx_1500 = min(range(len(band_wavelengths)), key=lambda i: abs(band_wavelengths[i][1] - 1500.0))
+    b1500 = np.nan_to_num(_get_band_slice(idx_1500), nan=0.0)
+    b1500_destriped = _destripe_2d(b1500)
+    u8_1500 = _to_u8(b1500_destriped)
+
+    # 2. Mean of bands nearest 950, 1500, and 1700 nm
+    idx_950 = min(range(len(band_wavelengths)), key=lambda i: abs(band_wavelengths[i][1] - 950.0))
+    idx_1700 = min(range(len(band_wavelengths)), key=lambda i: abs(band_wavelengths[i][1] - 1700.0))
+
+    b950 = np.nan_to_num(_get_band_slice(idx_950), nan=0.0)
+    b1700 = np.nan_to_num(_get_band_slice(idx_1700), nan=0.0)
+
+    b950_n = _destripe_2d(b950 / (np.nanmean(b950) + 1e-8))
+    b1500_n = _destripe_2d(b1500 / (np.nanmean(b1500) + 1e-8))
+    b1700_n = _destripe_2d(b1700 / (np.nanmean(b1700) + 1e-8))
+
+    b3_mean = (b950_n + b1500_n + b1700_n) / 3.0
+    b3_destriped = _destripe_2d(b3_mean)
+    u8_3band = _to_u8(b3_destriped)
+
+    # 3. First principal component across sub-2000 nm bands
+    sub_indices = [i for i, (_, wl) in enumerate(band_wavelengths) if wl <= 2000.0]
+    if not sub_indices:
+        sub_indices = list(range(min(77, len(band_wavelengths))))
+
+    k = len(sub_indices)
+    if interleave == "bsq":
+        sub_cube = np.asarray(cube[sub_indices, line_slice, sample_slice], dtype=np.float32)
+    else:
+        sub_cube = np.transpose(np.asarray(cube[line_slice, sub_indices, sample_slice], dtype=np.float32), (1, 0, 2))
+
+    sub_cube = np.nan_to_num(sub_cube, nan=0.0)
+    b_means = np.nanmean(sub_cube, axis=(1, 2), keepdims=True)
+    b_means = np.where(np.abs(b_means) > 1e-8, b_means, 1.0)
+    sub_norm = sub_cube / b_means
+
+    # Destripe all bands
+    H, W = sub_norm.shape[1], sub_norm.shape[2]
+    norm_destriped = np.zeros_like(sub_norm)
+    for i in range(k):
+        norm_destriped[i] = _destripe_2d(sub_norm[i])
+
+    # SVD PCA
+    X = norm_destriped.reshape(k, H * W)
+    X_mean = np.mean(X, axis=1, keepdims=True)
+    X_centered = X - X_mean
+    u, s, vt = np.linalg.svd(X_centered, full_matrices=False)
+    pc1 = vt[0].reshape(H, W)
+
+    # Orient sign so it positively correlates with mean reflectance
+    mean_img = np.mean(norm_destriped, axis=0)
+    corr = np.corrcoef(pc1.flatten(), mean_img.flatten())[0, 1]
+    if corr < 0:
+        pc1 = -pc1
+
+    pc1_destriped = _destripe_2d(pc1)
+    u8_pc1 = _to_u8(pc1_destriped)
+
+    # Save all three
+    p_1500 = out_p / "iirs_proxy_1500nm.png"
+    p_3band = out_p / "iirs_proxy_3band_mean.png"
+    p_pc1 = out_p / "iirs_proxy_pc1.png"
+
+    cv2.imwrite(str(p_1500), u8_1500)
+    cv2.imwrite(str(p_3band), u8_3band)
+    cv2.imwrite(str(p_pc1), u8_pc1)
+
+    print(f"Saved 3 proxy variants to {out_p.resolve()}:")
+    print(f"  - {p_1500.name}")
+    print(f"  - {p_3band.name}")
+    print(f"  - {p_pc1.name}")
+
+    return {
+        "single_1500nm": u8_1500,
+        "mean_3band": u8_3band,
+        "pc1": u8_pc1,
+    }
+
 
 
 def crop(
