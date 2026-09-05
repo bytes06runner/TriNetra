@@ -502,27 +502,48 @@ if current_step == 0:
                     st.session_state.mode = "real"
                     st.session_state.step = 1
                     st.rerun()
-                else:
-                    ohrc_loader = MemmapLoader(OHRC_IMG, OHRC_XML)
-                    iirs_loader = MemmapLoader(IIRS_QUB, IIRS_XML)
-                    ohrc_patch = ohrc_loader.extract_patch(size=PATCH_SIZE)
-                    iirs_band34 = iirs_loader.extract_band(band_index=34)
-                    tmc_patch = synthesize_tmc2(ohrc_patch, ohrc_loader.label.pixel_resolution_m, tmc2_target_gsd=5.0)
+                elif (Path(__file__).resolve().parent / "assets/real_cache/real_overlapping_pair.npz").exists():
+                    cache_file = Path(__file__).resolve().parent / "assets/real_cache/real_overlapping_pair.npz"
+                    data_npz = np.load(cache_file)
+                    tmc_crop_u8 = data_npz["tmc_crop"]
+                    iirs_grey = data_npz["iirs_grey"]
+                    tmc_down = cv2.resize(tmc_crop_u8, (iirs_grey.shape[1], iirs_grey.shape[0]), interpolation=cv2.INTER_AREA)
 
                     class DummyLabel: pass
-                    synth_label = DummyLabel()
-                    synth_label.pixel_resolution_m = 5.0
-                    synth_label.sun_elevation_deg = ohrc_loader.label.sun_elevation_deg
-                    synth_label.area = ohrc_loader.label.area
+                    meta_tmc_full = DummyLabel()
+                    meta_tmc_full.pixel_resolution_m = float(data_npz["tmc_res"])
+                    meta_tmc_full.sun_elevation_deg = float(data_npz["sun_el"])
+                    meta_tmc_full.area = "North Pole"
+
+                    meta_tmc_down = DummyLabel()
+                    meta_tmc_down.pixel_resolution_m = float(data_npz["iir_res"])
+                    meta_tmc_down.sun_elevation_deg = float(data_npz["sun_el"])
+                    meta_tmc_down.area = "North Pole (18.5× Bridge)"
+
+                    meta_iirs = DummyLabel()
+                    meta_iirs.pixel_resolution_m = float(data_npz["iir_res"])
+                    meta_iirs.sun_elevation_deg = float(data_npz["sun_el"])
+                    meta_iirs.area = "North Pole (<2000nm)"
+
+                    common = {
+                        "center_lat": float(data_npz["center_lat"]),
+                        "center_lon": float(data_npz["center_lon"]),
+                        "min_distance_km": float(data_npz["min_dist_m"]) / 1000.0,
+                        "a": {"center_scan": int(data_npz["tmc_scan"])},
+                        "b": {"center_scan": int(data_npz["iir_scan"])},
+                    }
 
                     st.session_state.raw_data = {
-                        "ohrc": {"image": ohrc_patch, "meta": ohrc_loader.label},
-                        "tmc2": {"image": tmc_patch, "meta": synth_label},
-                        "iirs": {"band34": iirs_band34, "meta": iirs_loader.label},
+                        "ohrc": {"image": tmc_crop_u8, "meta": meta_tmc_full},
+                        "tmc2": {"image": tmc_down, "meta": meta_tmc_down},
+                        "iirs": {"band34": iirs_grey, "meta": meta_iirs},
                     }
+                    st.session_state.common_info = common
                     st.session_state.mode = "real"
                     st.session_state.step = 1
                     st.rerun()
+                else:
+                    st.error("Real Chandrayaan-2 binary files not found on Desktop or local repository.")
 
     with col2:
         if st.button("▶  Full Pipeline Demo", use_container_width=True):
