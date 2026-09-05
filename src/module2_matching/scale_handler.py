@@ -41,37 +41,82 @@ class PyramidLevel:
         self.shape = self.image.shape[:2]
 
 
+def compute_scale_ratio(high_res_gsd: float, low_res_gsd: float) -> float:
+    """Compute the scale ratio between high-resolution and low-resolution GSDs.
+
+    For example, TMC-2 (4.96 m/px) and IIRS (91.75 m/px) yields:
+        4.96 / 91.75 = 0.05406  (i.e. ~18.5× scale factor).
+
+    Args:
+        high_res_gsd: Ground sample distance of the finer instrument (m/px).
+        low_res_gsd:  Ground sample distance of the coarser instrument (m/px).
+
+    Returns:
+        float scale ratio: high_res_gsd / low_res_gsd.
+    """
+    if high_res_gsd <= 0 or low_res_gsd <= 0:
+        raise ValueError(f"GSDs must be positive: high={high_res_gsd}, low={low_res_gsd}")
+    return float(high_res_gsd) / float(low_res_gsd)
+
+
+def compute_pyramid_depth(scale_ratio: float) -> int:
+    """Compute Gaussian pyramid depth dynamically from the actual scale ratio.
+
+    Instead of assuming a hardcoded constant (like 20× or 8 levels), this
+    computes ceil(log2(downsample_factor)) + 1 to ensure the pyramid reaches
+    the target resolution level.
+
+    For 18.5× downsampling (TMC-2 → IIRS):
+        log2(18.5) = 4.209 → ceil is 5 → depth = 6 levels (1×, 2×, 4×, 8×, 16×, 32×).
+
+    Args:
+        scale_ratio: high_res_gsd / low_res_gsd (e.g. 0.05406 for 18.5×).
+
+    Returns:
+        Integer number of pyramid levels required.
+    """
+    factor = 1.0 / scale_ratio if scale_ratio < 1.0 else scale_ratio
+    return max(2, int(np.ceil(np.log2(factor))) + 1)
+
+
 class GaussianPyramid:
     """Build an anti-aliased Gaussian pyramid from a high-resolution image.
 
     Each level is produced by Gaussian-blurring then downsampling by a
     factor of 2 (standard Laplacian pyramid construction).  The pyramid
-    is populated lazily and cached.
+    depth can be computed dynamically from the target scale ratio.
 
-    Example for OHRC (0.25 m) → TMC-2 (5 m) alignment::
-
-        pyr = GaussianPyramid(ohrc_image)
-        # Levels: 1×, 0.5×, 0.25×, 0.125×, 0.0625× (≈16×), 0.05× (≈20×)
-        level = pyr.get_level_for_scale(target_scale=1/20)
+    Example for TMC-2 (4.96 m) → IIRS (91.75 m) alignment:
+        ratio = compute_scale_ratio(4.96, 91.75)  # 0.05406 (~18.5×)
+        pyr = GaussianPyramid(tmc2_image, target_scale=ratio)
+        level = pyr.get_level_for_scale(ratio)
     """
 
     def __init__(
         self,
         image: np.ndarray,
-        max_levels: int = 8,
+        max_levels: Optional[int] = None,
+        target_scale: Optional[float] = None,
         blur_ksize: int = 5,
     ):
         """
         Args:
-            image:      Source image (2-D float32 [0, 1]).
-            max_levels: Maximum number of pyramid levels to build.
-            blur_ksize: Gaussian blur kernel size used before each 2× down.
+            image:        Source image (2-D float32 [0, 1]).
+            max_levels:   Maximum number of pyramid levels to build.
+                          If None, computed dynamically from target_scale (or defaults to 8).
+            target_scale: Desired downsampling ratio used to compute pyramid depth.
+            blur_ksize:   Gaussian blur kernel size used before each 2× down.
         """
         if image.ndim != 2:
             raise ValueError("GaussianPyramid expects a 2-D grayscale image.")
 
         self.original = image.astype(np.float32)
-        self.max_levels = max_levels
+        if max_levels is not None:
+            self.max_levels = max_levels
+        elif target_scale is not None:
+            self.max_levels = compute_pyramid_depth(target_scale)
+        else:
+            self.max_levels = 8
         self.blur_ksize = blur_ksize
         self._levels: List[PyramidLevel] = []
         self._built = False
@@ -198,10 +243,11 @@ class ScaleAligner:
                 ``src_offset``    – (row, col) crop offset in original coords
         """
         # -- Down-sample the high-res image --------------------------------
-        pyr = GaussianPyramid(high_res_image)
+        needed_depth = compute_pyramid_depth(scale_ratio)
+        pyr = GaussianPyramid(high_res_image, max_levels=needed_depth, target_scale=scale_ratio)
         pyr.build()
 
-        target_scale = scale_ratio  # e.g. 0.05 means 20× down
+        target_scale = scale_ratio  # e.g. 0.05406 means 18.5× down
         best_level = pyr.get_level_for_scale(target_scale)
         aligned_src = best_level.image
         src_scale = best_level.scale
@@ -237,6 +283,36 @@ class ScaleAligner:
             "dst_scale": dst_scale,
             "src_offset": (0, 0),
         }
+
+    def align_from_metadata(
+        self,
+        high_res_image: np.ndarray,
+        low_res_image: np.ndarray,
+        high_res_meta: dict,
+        low_res_meta: dict,
+    ) -> dict:
+        """Align high-res and low-res images by dynamically reading GSDs from labels.
+
+        Args:
+            high_res_image: Finer resolution image (e.g. TMC-2 at 4.96 m/px).
+            low_res_image:  Coarser resolution image (e.g. IIRS at 91.75 m/px).
+            high_res_meta:  Metadata dict from parse_label() for high-res product.
+            low_res_meta:   Metadata dict from parse_label() for low-res product.
+
+        Returns:
+            Dictionary produced by align() with computed scale ratio.
+        """
+        gsd_high = float(high_res_meta.get("pixel_resolution", 4.96))
+        gsd_low = float(low_res_meta.get("pixel_resolution", 91.75))
+        ratio = compute_scale_ratio(gsd_high, gsd_low)
+        logger.info(
+            "Aligning from metadata: High GSD=%.2fm, Low GSD=%.2fm -> Scale Ratio=%.5f (%.1f×)",
+            gsd_high,
+            gsd_low,
+            ratio,
+            1.0 / ratio,
+        )
+        return self.align(high_res_image, low_res_image, scale_ratio=ratio)
 
 
 # ---------------------------------------------------------------------------
