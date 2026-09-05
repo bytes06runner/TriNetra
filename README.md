@@ -52,14 +52,14 @@
 ## 🔭 Executive Summary
 
 **TriNetra (त्रिनेत्र)** is an autonomous remote sensing and computer vision framework engineered for the **Indian Space Research Organisation (ISRO)** to solve cross-sensor multi-resolution registration across three flagship optical instruments aboard **Chandrayaan-2**:
-1. **OHRC** (Orbiter High Resolution Camera) — $0.25\text{–}0.32\text{ m/pixel}$ (Panchromatic Visible)
-2. **TMC-2** (Terrain Mapping Camera-2) — $4.96\text{–}5.00\text{ m/pixel}$ (Panchromatic Visible)
-3. **IIRS** (Imaging Infrared Spectrometer) — $68.38\text{–}91.75\text{ m/pixel}$ (Hyperspectral Shortwave Infrared)
+1. **OHRC** (Orbiter High Resolution Camera) — 0.25–0.32 m/pixel (Panchromatic Visible)
+2. **TMC-2** (Terrain Mapping Camera-2) — 4.96–5.00 m/pixel (Panchromatic Visible)
+3. **IIRS** (Imaging Infrared Spectrometer) — 68.38–91.75 m/pixel (Hyperspectral Shortwave Infrared)
 
-By bridging up to a **$320\times$ spatial scale gap**, eliminating severe **cross-modal radiometric domain differences** (visible vs SWIR), and overcoming **grazing lunar polar illumination conditions** (incidence angles $>76^\circ$), TriNetra establishes sub-pixel geometric correspondence without requiring prior human seed points.
+By bridging up to a **320× spatial scale gap**, eliminating severe **cross-modal radiometric domain differences** (visible vs SWIR), and overcoming **grazing lunar polar illumination conditions** (incidence angles >76°), TriNetra establishes sub-pixel geometric correspondence without requiring prior human seed points.
 
 > [!IMPORTANT]
-> **Validated on Real Flight Data:** TriNetra has been rigorously validated on confirmed overlapping calibrated flight products from the **Lunar North Pole ($89.7086^\circ\text{N}, 5.0764^\circ\text{E}$)**, achieving a verified ground alignment within **$51.2\text{ meters}$**, **$100\%$ inlier consensus**, and a homography reprojection **$\text{RMSE} = 0.0003\text{ pixels}$**.
+> **Validated on Real Flight Data:** TriNetra has been rigorously validated on confirmed overlapping calibrated flight products from the **Lunar North Pole (89.7086°N, 5.0764°E)**, achieving a verified ground alignment within **51.2 meters**, **100% inlier consensus**, and a homography reprojection **RMSE = 0.0003 pixels**.
 
 ---
 
@@ -69,9 +69,9 @@ Chandrayaan-2 carries complementary remote sensing payloads with fundamentally o
 
 | Payload | Full Name | Spatial Resolution (GSD) | Swath Width | Spectral Coverage | Spectral Bands | Detector Architecture | Target Utility |
 |:---|:---|:---:|:---:|:---:|:---:|:---|:---|
-| **OHRC** | Orbiter High Resolution Camera | **$0.25\text{–}0.32\text{ m/px}$** | $3\text{ km}$ | $450\text{–}700\text{ nm}$ | 1 (Panchromatic) | TDI CCD (Time Delay Integration) | Lander hazard detection & boulder counting |
-| **TMC-2** | Terrain Mapping Camera-2 | **$4.96\text{–}5.00\text{ m/px}$** | $20\text{ km}$ | $500\text{–}800\text{ nm}$ | 1 (Panchromatic) | Linear Active Pixel Sensor (APS) | High-resolution 3D Digital Elevation Models (DEM) |
-| **IIRS** | Imaging Infrared Spectrometer | **$68.38\text{–}91.75\text{ m/px}$** | $20\text{ km}$ | $800\text{–}5000\text{ nm}$ | 256 contiguous | HgCdTe (MCT) Focal Plane Array | Volatiles, hydroxyl/water ($\text{H}_2\text{O}/\text{OH}$), mineralogy |
+| **OHRC** | Orbiter High Resolution Camera | **0.25–0.32 m/px** | 3 km | 450–700 nm | 1 (Panchromatic) | TDI CCD (Time Delay Integration) | Lander hazard detection & boulder counting |
+| **TMC-2** | Terrain Mapping Camera-2 | **4.96–5.00 m/px** | 20 km | 500–800 nm | 1 (Panchromatic) | Linear Active Pixel Sensor (APS) | High-resolution 3D Digital Elevation Models (DEM) |
+| **IIRS** | Imaging Infrared Spectrometer | **68.38–91.75 m/px** | 20 km | 800–5000 nm | 256 contiguous | HgCdTe (MCT) Focal Plane Array | Volatiles, hydroxyl/water (H₂O / OH), mineralogy |
 
 ### The Three Fundamental Obstacles
 
@@ -90,24 +90,29 @@ Chandrayaan-2 carries complementary remote sensing payloads with fundamentally o
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **The $320\times$ Spatial Disparity:** Direct keypoint extraction across a $320\times$ resolution discrepancy is mathematically ill-posed. An $80\text{ m}$ IIRS pixel integrates the radiant flux of over $100,000$ OHRC pixels. Classical descriptors (SIFT, ORB) fail completely because identical spatial frequency octaves simply do not exist in the raw images.
+1. **The 320× Spatial Disparity:** Direct keypoint extraction across a 320× resolution discrepancy is mathematically ill-posed. An 80 m IIRS pixel integrates the radiant flux of over 100,000 OHRC pixels. Classical descriptors (SIFT, ORB) fail completely because identical spatial frequency octaves simply do not exist in the raw images.
 2. **Cross-Modal Radiometric & Spectral Shift:** OHRC and TMC-2 measure reflected visible sunlight dominated by topography and optical shadows. IIRS measures shortwave infrared reflectance and, at wavelengths $\lambda > 2000\text{ nm}$, thermal emission governed by Planck's law ($T_{\text{lunar}} \approx 100\text{–}390\text{ K}$). Comparing raw visible pixel intensities to mid-IR radiance yields near-zero or negative mutual information.
-3. **Grazing Polar Illumination & Dynamic Shadowing:** In polar exploration zones, solar elevation drops below $15^\circ$ (incidence $>75^\circ$). Transient shadows cover $40\text{–}80\%$ of crater floors. Because Chandrayaan-2 orbits observe the same location weeks or months apart, the shadow edges rotate and stretch, causing standard vision algorithms to match the transient shadow boundary rather than the static crater rim.
-4. **Big Data Throughput Without OOM:** Calibrated PDS4 products exceed several gigabytes ($1.44\text{ GB}$ for TMC-2, $2.58\text{ GB}$ for IIRS). Processing pipelines cannot ingest full uncompressed rasters into conventional system memory.
+3. **Grazing Polar Illumination & Dynamic Shadowing:** In polar exploration zones, solar elevation drops below 15° (incidence >75°). Transient shadows cover 40–80% of crater floors. Because Chandrayaan-2 orbits observe the same location weeks or months apart, the shadow edges rotate and stretch, causing standard vision algorithms to match the transient shadow boundary rather than the static crater rim.
+4. **Big Data Throughput Without OOM:** Calibrated PDS4 products exceed several gigabytes (1.44 GB for TMC-2, 2.58 GB for IIRS). Processing pipelines cannot ingest full uncompressed rasters into conventional system memory.
 
 ---
 
 ## 💡 Key Technical Innovations
 
-- **Hub-and-Spoke Bridging Topology:** Decomposes the $320\times$ scale chasm into two tractable hops:
-  $$\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}$$
+- **Hub-and-Spoke Bridging Topology:** Decomposes the 320× scale chasm into two tractable hops:
+
+```math
+\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}
+```
+
   TMC-2 acts as the physical and mathematical hub, preserving consistent spatial and radiometric continuity.
-- **Sub-$2000\text{ nm}$ Reflectance Proxy Extraction:** Isolates IIRS bands 1–77 ($\lambda \le 1993.1\text{ nm}$) to filter out thermal infrared emission, synthesising a high-fidelity visible-proxy reflectance band that correlates directly with TMC-2 albedo.
-- **3D Selenographic Coordinate Transformation:** Converts PDS4 geometry points to 3D Cartesian space on a spherical Moon model ($R = 1737.4\text{ km}$) to locate intersecting flight trajectories and identify overlaps down to sub-$100\text{ m}$ ground distances.
-- **Scale-Adaptive Anti-Aliased Gaussian Decimation:** Analytically calculates instrument scale ratios ($18.50\times$) and computes required pyramid depth ($L = \lceil \log_2(18.50) \rceil + 1 = 6$ levels), applying anti-aliased spatial frequency attenuation before feature matching.
+
+- **Sub-2000 nm Reflectance Proxy Extraction:** Isolates IIRS bands 1–77 ($\lambda \le 1993.1\text{ nm}$) to filter out thermal infrared emission, synthesising a high-fidelity visible-proxy reflectance band that correlates directly with TMC-2 albedo.
+- **3D Selenographic Coordinate Transformation:** Converts PDS4 geometry points to 3D Cartesian coordinates on a spherical Moon model ($R = 1737.4\text{ km}$) to locate intersecting flight trajectories and identify overlaps down to sub-100 m ground distances.
+- **Scale-Adaptive Anti-Aliased Gaussian Decimation:** Analytically calculates instrument scale ratios ($S = 18.50\times$) and computes required pyramid depth ($L = 6$ levels), applying anti-aliased spatial frequency attenuation before feature matching.
 - **Shadow-Invariant Crater Ridge Detection:** Computes second-order spatial derivatives via multi-scale Hessian eigenvalue filtering (Sato/Meijering ridge detection), extracting physical crater rim skeletons while suppressing illumination shadows.
-- **Marginalizing Sample Consensus (MAGSAC++):** Eliminates rigid inlier thresholding via `cv2.USAC_MAGSAC`, delivering extreme outlier tolerance ($>90\%$) and sub-pixel registration accuracy.
-- **Zero-Copy Memory-Mapped Architecture:** Direct virtual memory paging via `np.memmap` eliminates heap memory spikes, allowing multi-gigabyte PDS4 products to run smoothly within a $250\text{ MB}$ RAM budget.
+- **Marginalizing Sample Consensus (MAGSAC++):** Eliminates rigid inlier thresholding via `cv2.USAC_MAGSAC`, delivering extreme outlier tolerance (>90%) and sub-pixel registration accuracy.
+- **Zero-Copy Memory-Mapped Architecture:** Direct virtual memory paging via `np.memmap` eliminates heap memory spikes, allowing multi-gigabyte PDS4 products to run smoothly within a 250 MB RAM budget.
 
 ---
 
@@ -178,24 +183,36 @@ flowchart TD
 - **Files:** `src/pds_loader.py` · `src/data_loader.py`
 - **PDS4 XML Metadata Extraction:** Dynamically parses PDS4 XML tags without manual schema hardcoding. Extracts array shape, byte offset, little-endian data type (`UnsignedLSB2`, `IEEE754MSBSingle`), pixel resolution, solar incidence angle, solar azimuth angle, and selenographic coordinates.
 - **Zero-Copy Memory-Mapped Arrays:** Reads binary data using `np.memmap(mode='r')`. Only the requested spatial slices or band subsets enter the CPU cache, preventing memory crashes when scanning through multi-gigabyte strips.
-- **Physical Exclusion of Thermal Infrared ($>2000\text{ nm}$):**
-  Lunar surface temperatures can exceed $390\text{ K}$ under sunlight. Wavelengths beyond $2.0\text{ }\mu\text{m}$ (bands 78–256) are dominated by blackbody thermal emission, obscuring mineral and reflectance signatures. TriNetra averages bands 1–77 ($712.3\text{–}1993.1\text{ nm}$):
-  $$I_{\text{proxy}}(x, y) = \frac{1}{77} \sum_{b=1}^{77} \mathcal{C}(b, x, y)$$
+- **Physical Exclusion of Thermal Infrared (>2000 nm):**
+  Lunar surface temperatures can exceed 390 K under sunlight. Wavelengths beyond 2.0 µm (bands 78–256) are dominated by blackbody thermal emission, obscuring mineral and reflectance signatures. TriNetra averages bands 1–77 (712.3–1993.1 nm):
+
+```math
+I_{\text{proxy}}(x, y) = \frac{1}{77} \sum_{b=1}^{77} \mathcal{C}(b, x, y)
+```
+
   This synthesized proxy reproduces visual surface reflectance with high albedo correlation to panchromatic imagery.
 
 ### Module 2: 3D Selenographic Geolocation & Footprint Alignment
 - **File:** `src/geo_align.py`
 - **Spherical to 3D Cartesian Conversion:**
-  To compute precise Euclidean distances on the curved lunar body ($R_{\text{Moon}} = 1737.4\text{ km}$):
-  $$X = R \cos(\phi) \cos(\lambda), \quad Y = R \cos(\phi) \sin(\lambda), \quad Z = R \sin(\phi)$$
+  To compute precise Euclidean distances on the curved lunar body ($R = 1737.4\text{ km}$):
+
+```math
+X = R \cos(\phi) \cos(\lambda), \quad Y = R \cos(\phi) \sin(\lambda), \quad Z = R \sin(\phi)
+```
+
   where $\phi$ is selenographic latitude and $\lambda$ is longitude.
 - **High-Performance Spatial Query:** KD-Tree indexes millions of along-track coordinate points from geometry files (`*_g_grd_*.csv`) in milliseconds, resolving the closest ground approach between independent satellite passes.
 
 ### Module 3: Scale-Adaptive Gaussian Decimation & Feature Matching
 - **Files:** `src/module2_matching/scale_handler.py` · `src/module2_matching/hub_matcher.py`
 - **Dynamic Octave Selection:**
-  $$\text{Scale Ratio } S = \frac{\text{GSD}_{\text{target}}}{\text{GSD}_{\text{source}}}, \quad L = \left\lceil \log_2(S) \right\rceil + 1$$
-  For TMC-2 ($4.96\text{ m}$) to IIRS ($91.75\text{ m}$), $S = 18.50\times$, yielding $L = 6$ levels.
+  Analytically computes scale ratios and the required Gaussian pyramid decimation levels:
+
+```math
+S = \frac{\text{GSD}_{\text{target}}}{\text{GSD}_{\text{source}}} = \frac{91.75}{4.96} = 18.50\times, \quad L = \left\lceil \log_2(S) \right\rceil + 1 = 6 \text{ levels}
+```
+
 - **Anti-Aliased Filtering:** Downsampling without pre-filtering introduces severe high-frequency aliasing. TriNetra computes an anti-aliased Gaussian kernel with standard deviation $\sigma = \sqrt{(S/2)^2 - 1}$ before area decimation (`cv2.INTER_AREA`), aligning the spatial frequency spectrum between sensors.
 - **Optimized Feature Detectors:** Tuned SIFT with relaxed contrast sensitivity (`contrastThreshold=0.01`, `edgeThreshold=20`) to extract rich keypoints even within dark crater interiors and low-contrast regolith fields.
 
@@ -203,15 +220,27 @@ flowchart TD
 - **Files:** `src/module3_crater_verification/structure_extractor.py` · `verifier.py`
 - **Hessian Eigenvalue Ridge Detection:**
   Computes the 2D Hessian matrix of image intensities at scale $\sigma$:
-  $$\mathbf{H}(x, y; \sigma) = \begin{bmatrix} I_{xx}(x, y; \sigma) & I_{xy}(x, y; \sigma) \\ I_{xy}(x, y; \sigma) & I_{yy}(x, y; \sigma) \end{bmatrix}$$
+
+```math
+\mathbf{H}(x, y; \sigma) = \begin{bmatrix} I_{xx}(x, y; \sigma) & I_{xy}(x, y; \sigma) \\ I_{xy}(x, y; \sigma) & I_{yy}(x, y; \sigma) \end{bmatrix}
+```
+
   The eigenvalues $\lambda_1, \lambda_2$ ($\lambda_1 \le \lambda_2$) capture curvature. Ridges (crater rims) correspond to strong negative maximum principal curvature:
-  $$R_{\text{Sato}}(x, y; \sigma) = -\lambda_1 \quad \text{if } \lambda_1 < 0 \text{ else } 0$$
+
+```math
+R_{\text{Sato}}(x, y; \sigma) = -\lambda_1 \quad (\text{if } \lambda_1 < 0 \text{ else } 0)
+```
+
   This yields a binary topological skeleton unaffected by sun elevation or azimuth shifts.
 
 ### Module 5: Robust Geometric Registration (MAGSAC++)
 - **File:** `src/module4_registration/registration.py`
 - **Marginalizing Sample Consensus:** Standard RANSAC relies on a hard inlier threshold that fails across multi-resolution data. MAGSAC++ marginalizes over a continuous range of noise thresholds, generating stable projective homographies:
-  $$\mathbf{x}_{\text{target}} \sim \mathbf{H} \cdot \mathbf{x}_{\text{source}}, \quad \mathbf{H} \in \mathbb{R}^{3 \times 3}$$
+
+```math
+\mathbf{x}_{\text{target}} \sim \mathbf{H} \cdot \mathbf{x}_{\text{source}}, \quad \mathbf{H} \in \mathbb{R}^{3 \times 3}
+```
+
 - **Sub-Pixel Warping & Verification:** Applies perspective transform mapping with bilinear interpolation, generating registration difference maps, alpha blends, and alternating checkerboard tiles to inspect joint boundary alignment.
 
 ---
@@ -226,13 +255,13 @@ TriNetra has been validated on flight products acquired over the **Lunar North P
 |:---|:---|:---|:---:|
 | **Product Identifier** | `ch2_tmc_ncn_20230528T1712292966_d_img_d32` | `ch2_iir_nci_20230615T0132312064_d_img_n18` | Confirmed Overlap Pair |
 | **Observation Date** | 28 May 2023 17:12:29 UTC | 15 June 2023 01:32:31 UTC | 17.3 days separation |
-| **File Format & Size** | `.img` (PDS4 binary) — **$1.44\text{ GB}$** ($1,440,432,000$ B) | `.qub` (PDS4 cube) — **$2.58\text{ GB}$** ($2,585,088,000$ B) | Zero-copy memmap |
-| **Array Dimensions** | $180,054 \text{ Lines} \times 4,000 \text{ Samples}$ | $256 \text{ Bands} \times 10,098 \text{ Lines} \times 250 \text{ Samples}$ | 2D image vs 3D cube |
+| **File Format & Size** | `.img` (PDS4 binary) — **1.44 GB** (1,440,432,000 B) | `.qub` (PDS4 cube) — **2.58 GB** (2,585,088,000 B) | Zero-copy memmap |
+| **Array Dimensions** | 180,054 Lines × 4,000 Samples | 256 Bands × 10,098 Lines × 250 Samples | 2D image vs 3D cube |
 | **Data Encoding** | Unsigned 16-bit Little-Endian (`uint16 LE`) | 32-bit Float Little-Endian (`float32 LE BSQ`) | Calibrated radiance |
-| **Ground Sample Distance** | **$4.96\text{ m/pixel}$** | **$91.75\text{ m/pixel}$** | **$18.50\times$ scale gap** |
-| **Solar Incidence Angle** | **$76.92^\circ$** | **$76.93^\circ$** | **$\Delta = 0.01^\circ$ (Identical)** |
-| **Solar Azimuth Angle** | **$191.65^\circ$** | **$191.69^\circ$** | **$\Delta = 0.04^\circ$ (Identical)** |
-| **Closest Selenographic Coordinate**| **$89.7086^\circ\text{N}, 5.0764^\circ\text{E}$** | **$89.7086^\circ\text{N}, 5.0764^\circ\text{E}$** | **$51.2\text{ m}$ Ground Approach** |
+| **Ground Sample Distance** | **4.96 m/pixel** | **91.75 m/pixel** | **18.50× scale gap** |
+| **Solar Incidence Angle** | **76.92°** | **76.93°** | **Δ = 0.01° (Identical)** |
+| **Solar Azimuth Angle** | **191.65°** | **191.69°** | **Δ = 0.04° (Identical)** |
+| **Closest Selenographic Coordinate**| **89.7086°N, 5.0764°E** | **89.7086°N, 5.0764°E** | **51.2 m Ground Approach** |
 
 ### Visual Results on Real Flight Data
 
@@ -263,16 +292,16 @@ We benchmarked TriNetra against standard computer vision baselines across the re
 
 | Registration Method | Scale Handling | Cross-Modal Adaptation | Inlier Count | Inlier Ratio (%) | Reprojection RMSE (px) | Robustness to Sun Angle Shifts | Execution Latency |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Standard SIFT + RANSAC** | None (Raw Images) | None (Raw Wavelengths) | 0 | 0.0% | Failed (No Convergence) | ❌ Zero Tolerance | $2.4\text{ s}$ |
-| **ORB + RANSAC** | FAST Pyramid | Grayscale Conversion | 0 | 0.0% | Failed (No Convergence) | ❌ Zero Tolerance | $0.8\text{ s}$ |
-| **Multi-Scale SIFT + RANSAC** | Manual Resizing | Average All Bands | 3 | 21.4% | $4.210\text{ px}$ | ⚠️ Unstable | $3.1\text{ s}$ |
-| **SuperPoint + LightGlue** | Deep Multi-Scale | Grayscale Conversion | 8 | 61.5% | $0.892\text{ px}$ | ⚠️ Moderate | $6.8\text{ s}$ (GPU req.) |
+| **Standard SIFT + RANSAC** | None (Raw Images) | None (Raw Wavelengths) | 0 | 0.0% | Failed (No Convergence) | ❌ Zero Tolerance | 2.4 s |
+| **ORB + RANSAC** | FAST Pyramid | Grayscale Conversion | 0 | 0.0% | Failed (No Convergence) | ❌ Zero Tolerance | 0.8 s |
+| **Multi-Scale SIFT + RANSAC** | Manual Resizing | Average All Bands | 3 | 21.4% | 4.210 px | ⚠️ Unstable | 3.1 s |
+| **SuperPoint + LightGlue** | Deep Multi-Scale | Grayscale Conversion | 8 | 61.5% | 0.892 px | ⚠️ Moderate | 6.8 s (GPU req.) |
 | **TriNetra (Ours)** | **Analytical Gaussian Octaves** | **Sub-2000nm Proxy + CLAHE** | **14** | **100.0%** | **0.0003 px** | **✅ Invariant (Hessian + MAGSAC++)** | **0.42 s (CPU)** |
 
 ### Computational Footprint
-- **Peak RAM Consumption:** $< 250\text{ MB}$ (via zero-copy memory mapping on $4\text{+ GB}$ raw data).
-- **Inlier Precision:** $100\%$ consensus under MAGSAC++ robust estimator.
-- **Sub-Pixel Accuracy:** Reprojection error $\text{RMSE} = 0.0003\text{ px}$.
+- **Peak RAM Consumption:** < 250 MB (via zero-copy memory mapping on 4+ GB raw data).
+- **Inlier Precision:** 100% consensus under MAGSAC++ robust estimator.
+- **Sub-Pixel Accuracy:** Reprojection error RMSE = 0.0003 px.
 
 ---
 
@@ -286,12 +315,12 @@ TriNetra includes an interactive web dashboard designed with a dark, high-contra
 
 ### Dual Operational Modes
 1. **Local Direct PDS4 Mode:** Discovers raw `.img` and `.qub` files on the local filesystem (`~/Desktop/data/` or `./data/`), reading and slicing files with zero memory overhead.
-2. **Cloud Standalone Mode:** Ships with an integrated pre-extracted real polar cache (`assets/real_cache/real_overlapping_pair.npz`, $7.24\text{ MB}$), allowing full demonstration on Streamlit Cloud without downloading gigabyte-scale datasets.
+2. **Cloud Standalone Mode:** Ships with an integrated pre-extracted real polar cache (`assets/real_cache/real_overlapping_pair.npz`, 7.24 MB), allowing full demonstration on Streamlit Cloud without downloading gigabyte-scale datasets.
 
 ### Dashboard Capabilities
-- **Tab 1 — Data Discovery & Selenographic Alignment:** Inspects real PDS4 XML metadata, coordinates, ground approach distance ($51.2\text{ m}$), and solar angles.
+- **Tab 1 — Data Discovery & Selenographic Alignment:** Inspects real PDS4 XML metadata, coordinates, ground approach distance (51.2 m), and solar angles.
 - **Tab 2 — Feature Matching:** Renders scale-adaptive keypoint matches with horizontal green correspondence lines.
-- **Tab 3 — Geometric Registration:** Displays the computed $3 \times 3$ homography matrix, inlier counts, and inlier RMSE ($0.0003\text{ px}$).
+- **Tab 3 — Geometric Registration:** Displays the computed $3 \times 3$ homography matrix, inlier counts, and inlier RMSE (0.0003 px).
 - **Tab 4 — Error Analysis & Metric Dashboard:** Reprojection residuals, inlier consensus distributions, and quality metrics.
 - **Tab 5 — Presenter's Notes:** Structured, horizontal analytical briefing notes tailored for live evaluation during SIH 2026.
 
@@ -302,7 +331,7 @@ TriNetra includes an interactive web dashboard designed with a dark, high-contra
 ### System Requirements
 - **OS:** Linux, macOS, or Windows
 - **Python:** 3.9, 3.10, or 3.11
-- **RAM:** Minimum $4\text{ GB}$ (zero-copy memory mapping ensures low memory usage)
+- **RAM:** Minimum 4 GB (zero-copy memory mapping ensures low memory usage)
 
 ### 1. Clone & Install Dependencies
 
@@ -435,7 +464,7 @@ TriNetra/
 ## 👤 Author
 
 **Srijeet Prasad Banerjee**  
-*Solo Developer — Smart India Hackathon 2026*  
+*Smart India Hackathon 2026*  
 - **GitHub:** [@bytes06runner](https://github.com/bytes06runner)  
 - **Project:** [TriNetra (SIH26166)](https://github.com/bytes06runner/TriNetra)
 
