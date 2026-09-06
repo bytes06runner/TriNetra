@@ -57,37 +57,57 @@ def main():
     kp1, des1 = sift.detectAndCompute(o_clahe, None)
     kp2, des2 = sift.detectAndCompute(t_clahe, None)
 
-    bf = cv2.BFMatcher(cv2.NORM_L2)
-    raw_matches = bf.knnMatch(des1, des2, k=2)
-    good = [m for m, n in raw_matches if len((m, n)) == 2 and m.distance < 0.85 * n.distance]
+    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+    matches = bf.match(des1, des2)
 
-    pts1 = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-    pts2 = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+    # Spatial deduplication: enforce unique physical crater features (>20 px apart)
+    unique_pts1, unique_pts2 = [], []
+    for m in sorted(matches, key=lambda x: x.distance):
+        p1 = kp1[m.queryIdx].pt
+        p2 = kp2[m.trainIdx].pt
+        if all(np.linalg.norm(np.array(p1) - np.array(u1)) > 20 for u1 in unique_pts1) and \
+           all(np.linalg.norm(np.array(p2) - np.array(u2)) > 20 for u2 in unique_pts2):
+            unique_pts1.append(p1)
+            unique_pts2.append(p2)
 
-    # Robust MAGSAC++ homography estimation
-    if len(good) >= 4:
-        H, mask = cv2.findHomography(pts1, pts2, cv2.USAC_MAGSAC, 5.0)
-        inliers = int(np.sum(mask)) if mask is not None else 0
-        inlier_ratio = (inliers / len(good) * 100.0) if len(good) > 0 else 0.0
-        mask_bool = mask.ravel().astype(bool) if mask is not None else np.zeros(len(good), dtype=bool)
+    pts1 = np.float32(unique_pts1)
+    pts2 = np.float32(unique_pts2)
+    total_candidates = len(pts1)
+
+    # Robust Affine Similarity estimation (Scale, Rotation, Translation)
+    # Orbital nadir cameras over lunar terrain obey Euclidean similarity/affine geometry
+    if total_candidates >= 4:
+        M, inliers_mask = cv2.estimateAffinePartial2D(pts1, pts2, method=cv2.RANSAC, ransacReprojThreshold=15.0)
+        inliers = int(np.sum(inliers_mask)) if inliers_mask is not None else 0
+        inlier_ratio = (inliers / total_candidates * 100.0) if total_candidates > 0 else 0.0
+        mask_bool = inliers_mask.ravel().astype(bool) if inliers_mask is not None else np.zeros(total_candidates, dtype=bool)
+        H = np.eye(3, dtype=np.float64)
+        if M is not None:
+            H[:2, :] = M
     else:
-        H = np.eye(3)
+        H = np.eye(3, dtype=np.float64)
         inliers = 0
         inlier_ratio = 0.0
-        mask_bool = np.zeros(len(good), dtype=bool)
+        mask_bool = np.zeros(total_candidates, dtype=bool)
 
-    print(f"Genuine Flight Inliers (MAGSAC++): {inliers} / {len(good)} ({inlier_ratio:.1f}%)")
+    print(f"Genuine Flight Inliers (Robust Affine): {inliers} / {total_candidates} ({inlier_ratio:.1f}%)")
 
     # Render Side-by-Side Match Image
-    match_img = cv2.drawMatches(
-        disp_ohr, [cv2.KeyPoint(p[0][0], p[0][1], 5) for p in pts1],
-        disp_tmc, [cv2.KeyPoint(p[0][0], p[0][1], 5) for p in pts2],
-        [cv2.DMatch(i, i, 0) for i in range(len(pts1)) if mask_bool[i]],
-        None,
-        matchColor=(0, 255, 0),
-        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
-    )
-    cv2.imwrite(str(OUTPUT_PNG), match_img)
+    pts1_in = pts1[mask_bool]
+    pts2_in = pts2[mask_bool]
+
+    vis = np.hstack([disp_ohr, disp_tmc])
+    vis_rgb = cv2.cvtColor(vis, cv2.COLOR_GRAY2RGB)
+    w = disp_ohr.shape[1]
+
+    for p1, p2 in zip(pts1_in, pts2_in):
+        pt1 = (int(round(p1[0])), int(round(p1[1])))
+        pt2 = (int(round(p2[0] + w)), int(round(p2[1])))
+        cv2.line(vis_rgb, pt1, pt2, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.circle(vis_rgb, pt1, 4, (255, 120, 0), -1)
+        cv2.circle(vis_rgb, pt2, 4, (0, 200, 255), -1)
+
+    cv2.imwrite(str(OUTPUT_PNG), vis_rgb)
 
     # Save compact NPZ archive
     np.savez_compressed(
@@ -95,12 +115,12 @@ def main():
         disp_ohrc=disp_ohr,
         disp_tmc=disp_tmc,
         raw_tmc_crop=tmc_u8,
-        pts1=pts1.reshape(-1, 2),
-        pts2=pts2.reshape(-1, 2),
+        pts1=pts1,
+        pts2=pts2,
         inlier_mask=mask_bool,
         H=H,
         inliers=inliers,
-        total_matches=len(good),
+        total_matches=total_candidates,
         inlier_ratio=inlier_ratio,
         ohrc_res=0.26,
         tmc_res=4.72,

@@ -90,51 +90,55 @@ def main():
     kp_i, des_i = sift.detectAndCompute(i_clahe, None)
 
     # Bidirectional cross-check matching
-    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=False)
-    m12 = bf.knnMatch(des_t, des_i, k=2)
-    m21 = bf.knnMatch(des_i, des_t, k=2)
+    bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+    matches = bf.match(des_t, des_i)
 
-    good12 = {m.queryIdx: m.trainIdx for m, n in m12 if m.distance < 0.82 * n.distance}
-    good21 = {m.queryIdx: m.trainIdx for m, n in m21 if m.distance < 0.82 * n.distance}
+    # Spatial deduplication: enforce distinct physical crater locations (>20 px apart)
+    unique_pts1, unique_pts2 = [], []
+    for m in sorted(matches, key=lambda x: x.distance):
+        p1 = kp_t[m.queryIdx].pt
+        p2 = kp_i[m.trainIdx].pt
+        if all(np.linalg.norm(np.array(p1) - np.array(u1)) > 20 for u1 in unique_pts1) and \
+           all(np.linalg.norm(np.array(p2) - np.array(u2)) > 20 for u2 in unique_pts2):
+            unique_pts1.append(p1)
+            unique_pts2.append(p2)
 
-    mutual = []
-    seen2 = set()
-    for q1, t2 in good12.items():
-        if good21.get(t2) == q1 and t2 not in seen2:
-            mutual.append((q1, t2))
-            seen2.add(t2)
-
-    print(f"   Mutual consistent candidate matches: {len(mutual)}")
-
-    pts1 = np.float32([kp_t[q1].pt for q1, t2 in mutual]).reshape(-1, 1, 2)
-    pts2 = np.float32([kp_i[t2].pt for q1, t2 in mutual]).reshape(-1, 1, 2)
+    pts1 = np.float32(unique_pts1)
+    pts2 = np.float32(unique_pts2)
     total_candidates = len(pts1)
 
-    # 7. Homography Estimation via USAC-MAGSAC++
-    print("\n5. Estimating projective homography via USAC-MAGSAC++...")
+    print(f"   Deduplicated mutual candidate matches: {total_candidates}")
+
+    # 7. Robust Affine Similarity Estimation (Scale, Rotation, Translation)
+    print("\n5. Estimating robust affine similarity transformation...")
     if total_candidates >= 4:
-        H, inlier_mask = cv2.findHomography(pts1, pts2, cv2.USAC_MAGSAC, 8.0)
+        M, inlier_mask = cv2.estimateAffinePartial2D(pts1, pts2, method=cv2.RANSAC, ransacReprojThreshold=20.0)
         inliers = int(np.sum(inlier_mask)) if inlier_mask is not None else 0
         inlier_ratio = (inliers / total_candidates * 100.0) if total_candidates > 0 else 0.0
+        mask_bool = inlier_mask.ravel().astype(bool) if inlier_mask is not None else np.zeros(total_candidates, dtype=bool)
+        H = np.eye(3, dtype=np.float64)
+        if M is not None:
+            H[:2, :] = M
     else:
-        H = np.eye(3)
+        H = np.eye(3, dtype=np.float64)
         inlier_mask = np.ones((total_candidates, 1), dtype=np.uint8)
+        mask_bool = np.ones(total_candidates, dtype=bool)
         inliers = total_candidates
         inlier_ratio = 100.0
 
-    print(f"   MAGSAC++ Inliers: {inliers} / {total_candidates} ({inlier_ratio:.1f}%)")
-    print("   Estimated Homography H:")
+    print(f"   Affine Similarity Inliers: {inliers} / {total_candidates} ({inlier_ratio:.1f}%)")
+    print("   Transformation Matrix H (3x3 Homogeneous Affine):")
     print(np.round(H, 4))
 
     # Compute reprojection RMSE on inliers
-    inlier_idx = np.where(inlier_mask.ravel() == 1)[0]
-    pts1_in = pts1[inlier_idx]
-    pts2_in = pts2[inlier_idx]
-    pts1_h = np.concatenate([pts1_in, np.ones((len(pts1_in), 1, 1))], axis=-1)
-    proj = np.matmul(H, pts1_h.transpose(0, 2, 1)).transpose(0, 2, 1)
-    proj_xy = proj[:, :, :2] / proj[:, :, 2:]
-    reproj_errs = np.sqrt(np.sum((proj_xy - pts2_in)**2, axis=-1))
-    reproj_rmse = float(np.sqrt(np.mean(reproj_errs**2))) if len(reproj_errs) > 0 else 0.0
+    pts1_in = pts1[mask_bool]
+    pts2_in = pts2[mask_bool]
+    if len(pts1_in) > 0 and M is not None:
+        proj_xy = cv2.transform(pts1_in.reshape(-1, 1, 2), M).reshape(-1, 2)
+        reproj_errs = np.sqrt(np.sum((proj_xy - pts2_in)**2, axis=-1))
+        reproj_rmse = float(np.sqrt(np.mean(reproj_errs**2)))
+    else:
+        reproj_rmse = 0.0
     print(f"   Reprojection RMSE on Inliers: {reproj_rmse:.2f} pixels")
 
     # 8. Render and save match visualization image
@@ -143,9 +147,10 @@ def main():
     vis_rgb = cv2.cvtColor(vis, cv2.COLOR_GRAY2RGB)
     w = disp_tmc.shape[1]
 
+    inlier_idx = np.where(mask_bool)[0]
     for idx in inlier_idx:
-        p1 = (int(pts1[idx][0][0]), int(pts1[idx][0][1]))
-        p2 = (int(pts2[idx][0][0] + w), int(pts2[idx][0][1]))
+        p1 = (int(round(pts1[idx][0])), int(round(pts1[idx][1])))
+        p2 = (int(round(pts2[idx][0] + w)), int(round(pts2[idx][1])))
         cv2.line(vis_rgb, p1, p2, (0, 230, 115), 2, cv2.LINE_AA)
         cv2.circle(vis_rgb, p1, 4, (255, 120, 0), -1)
         cv2.circle(vis_rgb, p2, 4, (0, 200, 255), -1)

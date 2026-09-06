@@ -669,11 +669,13 @@ if st.session_state.active_scene == "hop1":
         w = img1.shape[1]
 
         for idx in sample_idx:
-            p1 = (int(pts1[idx][0]), int(pts1[idx][1]))
-            p2 = (int(pts2[idx][0] + w), int(pts2[idx][1]))
-            cv2.line(vis_rgb, p1, p2, (0, 225, 110), 1, cv2.LINE_AA)
-            cv2.circle(vis_rgb, p1, 3, (255, 120, 0), -1)
-            cv2.circle(vis_rgb, p2, 3, (0, 200, 255), -1)
+            p1_xy = pts1[idx].ravel()
+            p2_xy = pts2[idx].ravel()
+            p1 = (int(round(float(p1_xy[0]))), int(round(float(p1_xy[1]))))
+            p2 = (int(round(float(p2_xy[0]) + w)), int(round(float(p2_xy[1]))))
+            cv2.line(vis_rgb, p1, p2, (0, 225, 110), 2, cv2.LINE_AA)
+            cv2.circle(vis_rgb, p1, 4, (255, 120, 0), -1)
+            cv2.circle(vis_rgb, p2, 4, (0, 200, 255), -1)
 
         fig, ax = plt.subplots(figsize=(10, 5), facecolor="#F9F8F6")
         ax.imshow(vis_rgb)
@@ -885,8 +887,10 @@ elif st.session_state.active_scene == "hop2":
             w = img1.shape[1]
 
             for idx in inlier_indices:
-                p1 = (int(pts1[idx][0][0]), int(pts1[idx][0][1]))
-                p2 = (int(pts2[idx][0][0] + w), int(pts2[idx][0][1]))
+                p1_xy = pts1[idx].ravel()
+                p2_xy = pts2[idx].ravel()
+                p1 = (int(round(float(p1_xy[0]))), int(round(float(p1_xy[1]))))
+                p2 = (int(round(float(p2_xy[0]) + w)), int(round(float(p2_xy[1]))))
                 cv2.line(vis_rgb, p1, p2, (0, 225, 110), 2, cv2.LINE_AA)
                 cv2.circle(vis_rgb, p1, 4, (255, 120, 0), -1)
                 cv2.circle(vis_rgb, p2, 4, (0, 200, 255), -1)
