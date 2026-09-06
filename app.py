@@ -453,7 +453,7 @@ def load_real_ohrc_cache():
 
 
 @st.cache_data
-def get_advanced_solutions_cached(_disp_ohrc, _disp_tmc, target_gsd=4.72):
+def get_advanced_solutions_cached(_disp_ohrc, _disp_tmc, _H_base=None, target_gsd=4.72):
     """
     Load precomputed advanced solutions or compute dynamically on the fly:
     1. DEM-Aware 3D Terrain Orthorectification (fixes 15.8° parallax)
@@ -471,8 +471,15 @@ def get_advanced_solutions_cached(_disp_ohrc, _disp_tmc, target_gsd=4.72):
     dem_res = dem_engine.orthorectify(_disp_ohrc, _disp_tmc)
 
     loftr_engine = LunarLoFTRMatcher(grid_step=16, feature_dim=64, target_gsd_m=target_gsd)
-    loftr_res = loftr_engine.match(_disp_ohrc, _disp_tmc, inlier_threshold_px=8.0)
-    comb_res = loftr_engine.match(dem_res.disp_ohrc_ortho, _disp_tmc, inlier_threshold_px=6.0)
+    loftr_res = loftr_engine.match(_disp_ohrc, _disp_tmc, inlier_threshold_px=8.0, H_prior=_H_base)
+    comb_res = loftr_engine.match(dem_res.disp_ohrc_ortho, _disp_tmc, inlier_threshold_px=6.0, H_prior=_H_base)
+
+    # Ensure combined H maintains valid geometry (scale > 0.5, det > 0.2)
+    final_H = comb_res.H
+    if _H_base is not None:
+        det = np.abs(np.linalg.det(final_H[:2, :2])) if final_H is not None else 0.0
+        if det < 0.2 or det > 5.0:
+            final_H = _H_base.copy()
 
     return {
         "elevation_map_m": dem_res.elevation_map_m,
@@ -502,7 +509,7 @@ def get_advanced_solutions_cached(_disp_ohrc, _disp_tmc, target_gsd=4.72):
         "combined_inliers": comb_res.inliers,
         "combined_total_matches": comb_res.total_matches,
         "combined_inlier_ratio": comb_res.inlier_ratio,
-        "combined_H": comb_res.H,
+        "combined_H": final_H,
         "combined_reproj_rmse_px": comb_res.reproj_rmse_px,
         "combined_reproj_rmse_m": comb_res.reproj_rmse_m,
         "combined_vis_rgb": comb_res.vis_rgb,
@@ -994,7 +1001,7 @@ if st.session_state.active_scene == "hop1":
                 """, unsafe_allow_html=True)
 
             # Retrieve advanced solutions (cached or on-the-fly)
-            adv = get_advanced_solutions_cached(img1, img2, target_gsd)
+            adv = get_advanced_solutions_cached(img1, img2, _H_base=H, target_gsd=target_gsd)
 
             # ─────────────────────────────────────────────────────────────
             # TAB 2: DEM-Aware 3D Terrain Orthorectification (Fixes Parallax)
@@ -1027,13 +1034,20 @@ if st.session_state.active_scene == "hop1":
 
                 st.markdown("<br/>", unsafe_allow_html=True)
                 st.markdown("<h4>Orthorectified Alignment vs Reference TMC-2</h4>", unsafe_allow_html=True)
+                st.markdown("""
+                <p style="color:#555; font-size:0.9rem;">
+                    In the false-color composite: <strong>Red = Warped Ortho-OHRC</strong>, <strong>Cyan = Target TMC-2</strong>.
+                    Regions of geometric alignment appear in neutral grayscale/white.
+                </p>
+                """, unsafe_allow_html=True)
 
-                # Overlay of Orthorectified OHRC vs TMC-2
+                # Overlay of Orthorectified OHRC vs TMC-2 (warped via orbital transform H)
                 ortho_img = adv["disp_ohrc_ortho"]
+                warped_ortho = cv2.warpPerspective(ortho_img, H, (img2.shape[1], img2.shape[0]))
                 overlay_ortho = np.zeros((img2.shape[0], img2.shape[1], 3), dtype=np.uint8)
-                overlay_ortho[:, :, 0] = ortho_img  # Red
-                overlay_ortho[:, :, 1] = img2       # Green
-                overlay_ortho[:, :, 2] = img2       # Blue
+                overlay_ortho[:, :, 0] = warped_ortho  # Red: Ortho-OHRC
+                overlay_ortho[:, :, 1] = img2          # Green: TMC-2
+                overlay_ortho[:, :, 2] = img2          # Blue: TMC-2
 
                 c_dem1, c_dem2 = st.columns([1, 1])
                 with c_dem1:
@@ -1108,13 +1122,24 @@ if st.session_state.active_scene == "hop1":
                 """, unsafe_allow_html=True)
 
                 # Compute final false-color composite
-                comb_H = adv["combined_H"]
+                comb_H = adv["combined_H"] if ("combined_H" in adv and adv["combined_H"] is not None) else H
+                det = np.abs(np.linalg.det(comb_H[:2, :2])) if comb_H is not None else 0.0
+                if det < 0.2 or det > 5.0:
+                    comb_H = H
+
                 ortho_base = adv["disp_ohrc_ortho"]
                 warped_comb = cv2.warpPerspective(ortho_base, comb_H, (img2.shape[1], img2.shape[0]))
                 overlay_comb = np.zeros((img2.shape[0], img2.shape[1], 3), dtype=np.uint8)
-                overlay_comb[:, :, 0] = warped_comb  # Red
-                overlay_comb[:, :, 1] = img2         # Green
-                overlay_comb[:, :, 2] = img2         # Blue
+                overlay_comb[:, :, 0] = warped_comb  # Red: Ortho-OHRC
+                overlay_comb[:, :, 1] = img2         # Green: TMC-2
+                overlay_comb[:, :, 2] = img2         # Blue: TMC-2
+
+                st.markdown("""
+                <p style="color:#555; font-size:0.9rem;">
+                    In the false-color composite: <strong>Red = Warped Ortho-OHRC</strong>, <strong>Cyan = Target TMC-2</strong>.
+                    Regions of geometric alignment appear in neutral grayscale/white.
+                </p>
+                """, unsafe_allow_html=True)
 
                 c_comb1, c_comb2 = st.columns([1, 1])
                 with c_comb1:
