@@ -64,15 +64,40 @@ REFERENCED_DATASET_PRODUCTS = {
 
 
 def assert_referenced_products_exist():
-    """Verify that all referenced Chandrayaan-2 product IDs exist on disk. Fail loudly if phantom products are referenced."""
-    for prod_id, candidate_paths in REFERENCED_DATASET_PRODUCTS.items():
-        if not any(p.exists() for p in candidate_paths):
-            raise FileNotFoundError(
-                f"Startup assertion failed: Referenced Chandrayaan-2 product ID '{prod_id}' "
-                f"was not found on disk at any candidate path:\n"
-                + "\n".join(str(p) for p in candidate_paths)
-                + "\nPhantom product IDs are strictly rejected to maintain authentic flight provenance."
-            )
+    """
+    Verify authentic flight data provenance:
+    - On local workstations with the multi-gigabyte raw PDS4 archives, verify that raw product binaries exist.
+    - On Streamlit Cloud deployments (where multi-gigabyte raw binaries exceed Git limits), verify that
+      all four genuine pre-extracted flight cache archives exist on disk and are non-empty.
+    - Fail loudly if phantom products or missing caches are encountered.
+    """
+    has_local_raw_archive = any(
+        any(p.exists() for p in paths)
+        for paths in REFERENCED_DATASET_PRODUCTS.values()
+    )
+
+    if has_local_raw_archive:
+        for prod_id, candidate_paths in REFERENCED_DATASET_PRODUCTS.items():
+            if not any(p.exists() for p in candidate_paths):
+                raise FileNotFoundError(
+                    f"Startup assertion failed: Referenced Chandrayaan-2 product ID '{prod_id}' "
+                    f"was not found on disk at any candidate path:\n"
+                    + "\n".join(str(p) for p in candidate_paths)
+                    + "\nPhantom product IDs are strictly rejected to maintain authentic flight provenance."
+                )
+    else:
+        required_caches = {
+            "North Polar Baseline": CACHE_NPZ_NORTH,
+            "OHRC 20x Benchmark": CACHE_NPZ_OHRC,
+            "Hop 1 Flight Correspondence": CACHE_NPZ_FLIGHT_HOP1,
+            "Hop 2 Flight Correspondence": CACHE_NPZ_FLIGHT_HOP2,
+        }
+        for name, cache_path in required_caches.items():
+            if not cache_path.exists() or cache_path.stat().st_size == 0:
+                raise FileNotFoundError(
+                    f"Startup assertion failed: Cloud deployment requires authentic flight caches, "
+                    f"but '{name}' ({cache_path}) is missing or empty."
+                )
 
 
 assert_referenced_products_exist()
