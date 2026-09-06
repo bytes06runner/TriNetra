@@ -36,25 +36,27 @@ def main():
     if not tmc_img_path.exists() or not iirs_qub_path.exists():
         raise FileNotFoundError(f"Missing flight data files:\nTMC-2: {tmc_img_path}\nIIRS: {iirs_qub_path}")
 
-    # 1. Load TMC-2 memmap
+    # 1. Load TMC-2 memmap (uint16 <u2)
     print("\n1. Loading TMC-2 flight strip...")
-    m_tmc = np.memmap(str(tmc_img_path), dtype="uint8", mode="r", shape=(190368, 4000))
+    m_tmc = np.memmap(str(tmc_img_path), dtype="<u2", mode="r", shape=(189886, 4000))
     scale = 4.72 / 68.38
     y0_tmc = 122000 + int(64 / scale)
     h_tmc = int(120 / scale)
     x0_tmc = int(47 / scale)
     w_tmc = int(120 / scale)
-    tmc_crop = np.asarray(m_tmc[y0_tmc : y0_tmc + h_tmc, x0_tmc : x0_tmc + w_tmc], dtype=np.uint8)
-    print(f"   Extracted TMC-2 patch: shape={tmc_crop.shape} (8.2 km × 8.2 km at 4.72 m/px)")
+    tmc_raw = np.asarray(m_tmc[y0_tmc : y0_tmc + h_tmc, x0_tmc : x0_tmc + w_tmc], dtype=np.float32)
+    p2_t, p98_t = np.percentile(tmc_raw, (2.0, 98.0))
+    tmc_u8 = np.clip((tmc_raw - p2_t) / max(1.0, p98_t - p2_t) * 255.0, 0, 255).astype(np.uint8)
+    print(f"   Extracted TMC-2 patch: shape={tmc_raw.shape} (8.2 km × 8.2 km at 4.72 m/px, uint16)")
 
-    # 2. Load IIRS memmap (256 bands, 2264 lines, 250 samples)
-    print("\n2. Loading IIRS hyperspectral cube...")
+    # 2. Load IIRS memmap (256 bands, 2264 lines, 250 samples - raw product)
+    print("\n2. Loading IIRS raw hyperspectral cube...")
     m_iir = np.memmap(str(iirs_qub_path), dtype="<u2", mode="r", shape=(256, 2264, 250))
     # Sub-cube around crater ridge (lines 510 to 630, samples 60 to 180)
     iir_cube_sub = m_iir[30:60, 510:630, 60:180]
     iir_raw = np.mean(iir_cube_sub, axis=0).astype(np.float32)
     print(f"   Extracted IIRS sub-cube: shape={iir_raw.shape} (8.2 km × 8.2 km at 68.38 m/px)")
-    print(f"   Raw IIRS SWIR counts: min={iir_raw.min():.1f}, max={iir_raw.max():.1f}, mean={iir_raw.mean():.1f}")
+    print(f"   Raw IIRS SWIR counts: min={iir_raw.min():.1f}, max={iir_raw.max():.1f}, mean={iir_raw.mean():.1f} (raw DN, uncalibrated)")
 
     # 3. Bad detector repair & column median destriping
     print("\n3. Destriping and radiometric normalization of IIRS SWIR bands...")
@@ -66,7 +68,7 @@ def main():
 
     # 4. Standardize display windows for scale-space feature extraction
     disp_w, disp_h = 800, 800
-    disp_tmc = cv2.resize(tmc_crop, (disp_w, disp_h), interpolation=cv2.INTER_AREA)
+    disp_tmc = cv2.resize(tmc_u8, (disp_w, disp_h), interpolation=cv2.INTER_AREA)
     disp_iirs = cv2.resize(iir_u8, (disp_w, disp_h), interpolation=cv2.INTER_CUBIC)
 
     # 5. Contrast Equalization & structural features
@@ -111,8 +113,9 @@ def main():
 
     # 7. Robust Affine Similarity Estimation (Scale, Rotation, Translation)
     print("\n5. Estimating robust affine similarity transformation...")
+    threshold_px = 20.0
     if total_candidates >= 4:
-        M, inlier_mask = cv2.estimateAffinePartial2D(pts1, pts2, method=cv2.RANSAC, ransacReprojThreshold=20.0)
+        M, inlier_mask = cv2.estimateAffinePartial2D(pts1, pts2, method=cv2.RANSAC, ransacReprojThreshold=threshold_px)
         inliers = int(np.sum(inlier_mask)) if inlier_mask is not None else 0
         inlier_ratio = (inliers / total_candidates * 100.0) if total_candidates > 0 else 0.0
         mask_bool = inlier_mask.ravel().astype(bool) if inlier_mask is not None else np.zeros(total_candidates, dtype=bool)
@@ -139,7 +142,9 @@ def main():
         reproj_rmse = float(np.sqrt(np.mean(reproj_errs**2)))
     else:
         reproj_rmse = 0.0
-    print(f"   Reprojection RMSE on Inliers: {reproj_rmse:.2f} pixels")
+    print(f"   Reprojection RMSE on Inliers: {reproj_rmse:.2f} pixels (Threshold: {threshold_px:.2f} px)")
+    if reproj_rmse > 0.5 * threshold_px:
+        print(f"   [FLAG] Reprojection RMSE ({reproj_rmse:.2f} px) exceeds 50% of inlier threshold ({threshold_px:.2f} px). Circularity warning!")
 
     # 8. Render and save match visualization image
     print("\n6. Rendering match visualization...")
@@ -170,16 +175,19 @@ def main():
         str(npz_path),
         disp_tmc=disp_tmc,
         disp_iirs=disp_iirs,
-        raw_tmc_crop=tmc_crop,
+        raw_tmc_crop=tmc_u8,
         raw_iirs_crop=iir_u8,
         pts1=pts1,
         pts2=pts2,
         inlier_mask=inlier_mask.ravel(),
         H=H,
+        transform_type="Similarity Transform",
+        transform_dof=4,
         inliers=inliers,
         total_matches=total_candidates,
         inlier_ratio=float(inlier_ratio),
         reproj_rmse=float(reproj_rmse),
+        inlier_threshold=threshold_px,
         tmc_res=4.72,
         iir_res=68.38,
         scale_gap=14.49,
@@ -187,6 +195,8 @@ def main():
         center_lon=32.26,
         tmc_id="ch2_tmc_ncn_20230130T1900132182_d_img_d32",
         iirs_id="ch2_iir_nri_20231003T2152304115_d_img_d18",
+        processing_level="Raw",
+        calibration_applied=False,
         tmc_time="2023-01-30T19:00:13Z",
         iirs_time="2023-10-03T21:52:30Z",
         tmc_sun_az=53.0,

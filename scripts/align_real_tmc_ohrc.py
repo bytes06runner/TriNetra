@@ -90,12 +90,20 @@ def main():
         inlier_ratio = 0.0
         mask_bool = np.zeros(total_candidates, dtype=bool)
 
-    print(f"Genuine Flight Inliers (Robust Affine): {inliers} / {total_candidates} ({inlier_ratio:.1f}%)")
-
-    # Render Side-by-Side Match Image
+    # Compute Euclidean reprojection RMSE on inliers in pixels
     pts1_in = pts1[mask_bool]
     pts2_in = pts2[mask_bool]
+    if len(pts1_in) > 0 and M is not None:
+        proj_xy = cv2.transform(pts1_in.reshape(-1, 1, 2), M).reshape(-1, 2)
+        reproj_errs = np.sqrt(np.sum((proj_xy - pts2_in)**2, axis=-1))
+        reproj_rmse = float(np.sqrt(np.mean(reproj_errs**2)))
+    else:
+        reproj_rmse = 0.0
 
+    print(f"Genuine Flight Inliers (Robust Similarity): {inliers} / {total_candidates} ({inlier_ratio:.1f}%)")
+    print(f"Reprojection RMSE on Inliers: {reproj_rmse:.2f} pixels (Threshold: 15.0 px)")
+
+    # Render Side-by-Side Match Image
     vis = np.hstack([disp_ohr, disp_tmc])
     vis_rgb = cv2.cvtColor(vis, cv2.COLOR_GRAY2RGB)
     w = disp_ohr.shape[1]
@@ -119,9 +127,13 @@ def main():
         pts2=pts2,
         inlier_mask=mask_bool,
         H=H,
+        transform_type="Similarity Transform",
+        transform_dof=4,
         inliers=inliers,
         total_matches=total_candidates,
         inlier_ratio=inlier_ratio,
+        reproj_rmse=reproj_rmse,
+        inlier_threshold=15.0,
         ohrc_res=0.26,
         tmc_res=4.72,
         scale_gap=4.72 / 0.26,
