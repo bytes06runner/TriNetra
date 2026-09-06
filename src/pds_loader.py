@@ -393,6 +393,74 @@ def load_iirs(
     return mmap, meta
 
 
+def repair_bad_columns_2d(arr: np.ndarray, mad_thresh: float = 2.5) -> np.ndarray:
+    """Detect defective pushbroom detector columns (hot or dead pixels) and interpolate them.
+
+    Pushbroom spectrometers frequently possess anomalous detector elements where gain
+    non-uniformity causes individual columns to saturate or drop out. This function identifies
+    columns whose mean deviates by > mad_thresh times the Median Absolute Deviation (MAD) from
+    the median column profile and replaces them with linear interpolation from adjacent healthy columns.
+
+    Args:
+        arr: 2D numpy array [Lines, Samples].
+        mad_thresh: Threshold in MAD units (default 2.5).
+
+    Returns:
+        Cleaned 2D numpy array with interpolated bad columns.
+    """
+    arr_clean = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+    col_means = np.nanmean(arr_clean, axis=0)
+    col_med_1d = np.nanmedian(col_means)
+    col_mad = np.nanmedian(np.abs(col_means - col_med_1d))
+    spread = 1.4826 * max(float(col_mad), 1e-6)
+    thresh_high = col_med_1d + mad_thresh * spread
+    thresh_low = max(0.0, col_med_1d - mad_thresh * spread)
+
+    bad_cols = np.where((col_means > thresh_high) | (col_means < thresh_low))[0]
+    if len(bad_cols) == 0:
+        return arr_clean
+
+    cleaned = arr_clean.copy()
+    w = cleaned.shape[1]
+    for c in bad_cols:
+        left = c - 1
+        while left in bad_cols and left > 0:
+            left -= 1
+        right = c + 1
+        while right in bad_cols and right < w - 1:
+            right += 1
+        if left >= 0 and right < w:
+            cleaned[:, c] = (cleaned[:, left] + cleaned[:, right]) / 2.0
+        elif left >= 0:
+            cleaned[:, c] = cleaned[:, left]
+        elif right < w:
+            cleaned[:, c] = cleaned[:, right]
+
+    return cleaned
+
+
+def destripe_pushbroom_2d(
+    arr: np.ndarray,
+    alpha: float = 0.85,
+    repair_bad_cols: bool = True,
+) -> np.ndarray:
+    """Perform bad-column interpolation followed by pushbroom column median destriping.
+
+    Args:
+        arr: 2D array [Lines, Samples].
+        alpha: Relaxation factor for column median offset subtraction (0.85).
+        repair_bad_cols: Whether to detect and interpolate anomalous detector columns.
+
+    Returns:
+        Destriped 2D float32 array.
+    """
+    cleaned = repair_bad_columns_2d(arr) if repair_bad_cols else np.nan_to_num(arr, nan=0.0)
+    col_med = np.nanmedian(cleaned, axis=0, keepdims=True)
+    common_med = np.nanmedian(col_med)
+    col_offset = col_med - common_med
+    return cleaned - alpha * col_offset
+
+
 def iirs_to_grey(
     cube: Union[np.ndarray, np.memmap],
     band_wavelengths: List[Tuple[int, float]],
@@ -472,19 +540,9 @@ def iirs_to_grey(
 
     norm_avg_before = np.nanmean(norm_bands, axis=0)
 
-    # 4: Pushbroom column destriping: subtract only the median column offset
-    # Compute column profile across lines on the multi-band composite
-    col_med = np.nanmedian(norm_avg_before, axis=0, keepdims=True)
-    common_med = np.nanmedian(col_med)
-    col_offset = col_med - common_med
-
-    # Weaken filter with alpha=0.75 so residual column standard deviation remains non-zero,
-    # preventing over-correction and preserving real terrain variation across columns.
-    alpha = 0.75
-    avg_destriped = norm_avg_before - alpha * col_offset
-
-    # Column standard deviation metrics (measuring cross-column striping noise)
-    std_cols_before = float(np.std(col_med))
+    # 4: Pushbroom bad detector column repair & median destriping
+    std_cols_before = float(np.std(np.nanmedian(norm_avg_before, axis=0)))
+    avg_destriped = destripe_pushbroom_2d(norm_avg_before, alpha=0.85, repair_bad_cols=True)
     std_cols_after = float(np.std(np.nanmedian(avg_destriped, axis=0)))
     print(f"Standard deviation along columns before destriping: {std_cols_before:.6f}")
     print(f"Standard deviation along columns after destriping:  {std_cols_after:.6f}")
@@ -555,11 +613,8 @@ def iirs_proxy_variants(
     out_p = Path(save_dir)
     out_p.mkdir(parents=True, exist_ok=True)
 
-    def _destripe_2d(arr: np.ndarray, alpha: float = 0.75) -> np.ndarray:
-        col_med = np.nanmedian(arr, axis=0, keepdims=True)
-        common_med = np.nanmedian(col_med)
-        col_offset = col_med - common_med
-        return arr - alpha * col_offset
+    def _destripe_2d(arr: np.ndarray, alpha: float = 0.85) -> np.ndarray:
+        return destripe_pushbroom_2d(arr, alpha=alpha, repair_bad_cols=True)
 
     def _to_u8(arr: np.ndarray) -> np.ndarray:
         p2, p98 = np.percentile(arr, (2.0, 98.0))
@@ -610,7 +665,7 @@ def iirs_proxy_variants(
     b_means = np.where(np.abs(b_means) > 1e-8, b_means, 1.0)
     sub_norm = sub_cube / b_means
 
-    # Destripe all bands
+    # Destripe all bands with bad-column repair
     H, W = sub_norm.shape[1], sub_norm.shape[2]
     norm_destriped = np.zeros_like(sub_norm)
     for i in range(k):
