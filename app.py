@@ -818,7 +818,7 @@ if st.session_state.active_scene == "hop1":
                 Cross-instrument SIFT matching yields a <strong>{active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']})</strong>. This is below the threshold for a reliable geometric solution (minimum 15.0% inlier ratio and 20 consensus inliers required).
                 Ground reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_px:.2f} px in the TMC-2 frame at {target_gsd:.2f} m/px). The problem statement targets correspondence at OHRC scale (0.26 m/px).
                 The registration shown is illustrative of the pipeline, not a validated result.
-                Registration overlay and reprojection RMSE are withheld to maintain scientific validity; unconstrained transforms are rejected, exactly as in the polar SNR gate.
+                Unconstrained transforms are flagged, exactly as in the polar SNR gate.
             </div>
             """, unsafe_allow_html=True)
 
@@ -830,7 +830,7 @@ if st.session_state.active_scene == "hop1":
                     <li><strong>Threshold Widened:</strong> MAGSAC++ threshold was widened to {thresh_px:.1f} px ({thresh_m:.1f} m ground error) from the initial value of 5.0 px (23.6 m) to admit any consensus at all. Even at this tolerance the inlier ratio remains below the reliability gate.</li>
                     <li><strong>Candidate Ground Error:</strong> A 4-DoF {active_data.get('transform_type', 'Similarity Transform')} fitted to {active_data['inliers']} inliers yields a candidate reprojection residual of {rmse_px:.2f} px ({rmse_m:.1f} m ground error at {target_gsd:.2f} m/px) against the {thresh_px:.1f} px ({thresh_m:.1f} m) threshold. With only {active_data['inliers']} points, the transformation remains mathematically unvalidated.</li>
                     <li><strong>Physical Geometry & Parallax:</strong> OHRC was acquired at +15.76° roll; TMC-2 at −0.02° roll. This 15.8° viewing-angle difference over crater relief induces parallax that a 4-DoF similarity transform cannot model. Combined with the 114.6° solar azimuth difference, the low inlier ratio is consistent with the acquisition geometry rather than with a matcher defect. Correcting for it requires the topography-aware non-rigid stage (TPS with a DEM prior) described in the architecture.</li>
-                    <li><strong>Operational Safety:</strong> In autonomous planetary descent, knowing when a geometric solution lacks sufficient consensus prevents navigation divergence. The overlay is withheld to prevent misleading operators.</li>
+                    <li><strong>Operational Safety:</strong> In autonomous planetary descent, knowing when a geometric solution lacks sufficient consensus prevents navigation divergence. The overlay is flagged as unvalidated to prevent misleading operators.</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -840,6 +840,47 @@ if st.session_state.active_scene == "hop1":
                 render_image(img1, "Real OHRC Flight Image (0.26 m/px — Shiv Shakti Point)")
             with col_b:
                 render_image(img2, "Real TMC-2 Flight Image (4.72 m/px — South Pole Orbit)")
+
+            # ── Illustrative overlay (shown despite gate, with caveat) ──
+            st.markdown("""
+            <div style="background:#FFF3CD; border:1px solid #FFECB5; border-radius:8px; padding:0.8rem 1rem; margin:1rem 0 0.5rem 0;">
+                <strong>⚠️ Illustrative Overlay (Below Reliability Threshold)</strong><br/>
+                <span style="font-size:0.85rem; color:#664d03;">
+                    The false-color composite below is computed from the candidate transform but has <strong>not</strong> passed the inlier consensus gate.
+                    It is shown to demonstrate the pipeline mechanics, not as a validated registration result.
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <p style="color:#555; font-size:0.9rem;">
+                In the false-color composite: <strong>Red = Warped OHRC</strong>, <strong>Cyan = Target TMC-2</strong>.
+                Regions of geometric alignment appear in neutral grayscale/white.
+            </p>
+            """, unsafe_allow_html=True)
+
+            warped_ohrc = cv2.warpPerspective(img1, H, (img2.shape[1], img2.shape[0]))
+            overlay = np.zeros((img2.shape[0], img2.shape[1], 3), dtype=np.uint8)
+            overlay[:, :, 0] = warped_ohrc  # Red
+            overlay[:, :, 1] = img2         # Green
+            overlay[:, :, 2] = img2         # Blue
+
+            diff = np.abs(warped_ohrc.astype(np.float32) - img2.astype(np.float32))
+            mean_abs_intensity_diff = float(np.mean(diff))
+
+            c_reg1, c_reg2 = st.columns([1, 1])
+            with c_reg1:
+                render_image(overlay, "False-Color Registration Overlay (Red: OHRC, Cyan: TMC-2)", cmap=None)
+            with c_reg2:
+                st.markdown(metric_card("Reprojection Error", f"{rmse_px:.2f} px ({rmse_m:.1f} m)", f"Target GSD {target_gsd:.2f} m/px | {thresh_px:.1f} px ({thresh_m:.1f} m) threshold"), unsafe_allow_html=True)
+                st.markdown("<br/>", unsafe_allow_html=True)
+                st.markdown(metric_card("Intensity Discrepancy", f"{mean_abs_intensity_diff:.2f} DN", "Mean Absolute Intensity Discrepancy (DN)"), unsafe_allow_html=True)
+                st.markdown("<br/>", unsafe_allow_html=True)
+                st.markdown(metric_card("Geometric Inliers", f"{active_data['inliers']}", f"{active_data['inlier_ratio']:.1f}% Consensus ({active_data['inliers']}/{active_data['total_matches']})"), unsafe_allow_html=True)
+                st.markdown("<br/>", unsafe_allow_html=True)
+                t_type = active_data.get("transform_type", "Similarity Transform")
+                t_dof = active_data.get("transform_dof", 4)
+                st.markdown(metric_card("Transform Type", t_type, f"Degrees of Freedom: {t_dof}"), unsafe_allow_html=True)
 
             st.markdown(f"""
             <div class="presenter-box">
@@ -1089,7 +1130,8 @@ elif st.session_state.active_scene == "hop2":
                     <strong>🛑 Gated: Inlier Consensus Below Reliability Threshold ({flight_h2['inlier_ratio']:.1f}% Inliers, {flight_h2['inliers']} of {flight_h2['total_matches']})</strong><br/>
                     Cross-instrument SIFT matching yields a <strong>{flight_h2['inlier_ratio']:.1f}% inlier ratio ({flight_h2['inliers']} of {flight_h2['total_matches']})</strong>. This is below the threshold for a reliable geometric solution (minimum 15.0% inlier ratio and 20 consensus inliers required).
                     Ground reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_val:.2f} px in the IIRS frame at {target_gsd:.2f} m/px). The problem statement targets correspondence at OHRC scale (0.26 m/px).
-                    Registration overlay and reprojection RMSE are withheld to maintain scientific validity; fabricated matches and unconstrained transforms are rejected. The registration shown is illustrative of the pipeline, not a validated result.
+                    The registration shown is illustrative of the pipeline, not a validated result.
+                    Unconstrained transforms are flagged; fabricated matches are rejected.
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1102,7 +1144,7 @@ elif st.session_state.active_scene == "hop2":
                         <li><strong>Threshold Constraint Ratio:</strong> Candidate reprojection error is {rmse_val:.2f} px ({rmse_m:.1f} m ground error) against a {thresh_px:.1f} px ({thresh_m:.1f} m) threshold ({ratio_of_thresh:.1f}% of threshold). Because the RMSE is a substantial fraction of the inlier threshold, the solution is only marginally constrained by the threshold filter itself.</li>
                         <li><strong>Estimated Transform Model:</strong> {flight_h2.get('transform_type', 'Similarity Transform')} (Degrees of Freedom: {flight_h2.get('transform_dof', 4)}). With only {flight_h2['inliers']} inliers, even a 4-DoF model carries significant parameter uncertainty.</li>
                         <li><strong>Raw Radiometric Level:</strong> IIRS product <code>{flight_h2['iirs_id']}</code> is raw Level-1 (<code>nri</code>), not calibrated. Pixel values represent uncalibrated raw DN (mean {flight_h2['iirs_mean_dn']:.1f} DN) rather than surface reflectance or calibrated radiance.</li>
-                        <li><strong>Operational Safety:</strong> Autonomous withholding of unvalidated transforms prevents navigation divergence in lunar descent.</li>
+                        <li><strong>Operational Safety:</strong> Autonomous flagging of unvalidated transforms prevents navigation divergence in lunar descent.</li>
                     </ul>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1112,6 +1154,48 @@ elif st.session_state.active_scene == "hop2":
                     render_image(img1, "Real TMC-2 Flight Image (4.72 m/px — South Pole)")
                 with col_b:
                     render_image(img2, "Real IIRS Flight Proxy (68.38 m/px — Raw SWIR)")
+
+                # ── Illustrative overlay (shown despite gate, with caveat) ──
+                st.markdown("""
+                <div style="background:#FFF3CD; border:1px solid #FFECB5; border-radius:8px; padding:0.8rem 1rem; margin:1rem 0 0.5rem 0;">
+                    <strong>⚠️ Illustrative Overlay (Below Reliability Threshold)</strong><br/>
+                    <span style="font-size:0.85rem; color:#664d03;">
+                        The false-color composite below is computed from the candidate transform but has <strong>not</strong> passed the inlier consensus gate.
+                        It is shown to demonstrate the pipeline mechanics, not as a validated registration result.
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("""
+                <p style="color:#555; font-size:0.9rem;">
+                    In the false-color composite: <strong>Red = Warped TMC-2</strong>, <strong>Cyan = Target IIRS</strong>.
+                    Regions of geometric alignment appear in neutral grayscale/white.
+                </p>
+                """, unsafe_allow_html=True)
+
+                warped_tmc = cv2.warpPerspective(img1, H, (img2.shape[1], img2.shape[0]))
+                overlay = np.zeros((img2.shape[0], img2.shape[1], 3), dtype=np.uint8)
+                overlay[:, :, 0] = warped_tmc
+                overlay[:, :, 1] = img2
+                overlay[:, :, 2] = img2
+
+                diff = np.abs(warped_tmc.astype(np.float32) - img2.astype(np.float32))
+                mean_abs_intensity_diff = float(np.mean(diff))
+
+                c_reg1, c_reg2 = st.columns([1, 1])
+                with c_reg1:
+                    render_image(overlay, "False-Color Registration Overlay (Red: TMC-2, Cyan: IIRS)", cmap=None)
+                with c_reg2:
+                    ratio_flag = "⚠️ Marginal (>50% of thresh)" if (rmse_val / thresh_px) > 0.5 else "Constrained fit"
+                    st.markdown(metric_card("Reprojection Error", f"{rmse_val:.2f} px ({rmse_m:.1f} m)", f"{rmse_val:.2f} px / {thresh_px:.1f} px ({thresh_m:.1f} m, {ratio_flag})"), unsafe_allow_html=True)
+                    st.markdown("<br/>", unsafe_allow_html=True)
+                    st.markdown(metric_card("Intensity Discrepancy", f"{mean_abs_intensity_diff:.2f} DN", "Mean Absolute Intensity Discrepancy (DN)"), unsafe_allow_html=True)
+                    st.markdown("<br/>", unsafe_allow_html=True)
+                    st.markdown(metric_card("Geometric Inliers", f"{flight_h2['inliers']}", f"{flight_h2['inlier_ratio']:.1f}% Consensus ({flight_h2['inliers']}/{flight_h2['total_matches']})"), unsafe_allow_html=True)
+                    st.markdown("<br/>", unsafe_allow_html=True)
+                    t_type = flight_h2.get("transform_type", "Similarity Transform")
+                    t_dof = flight_h2.get("transform_dof", 4)
+                    st.markdown(metric_card("Transform Type", t_type, f"Degrees of Freedom: {t_dof}"), unsafe_allow_html=True)
 
                 st.markdown(f"""
                 <div class="presenter-box">
