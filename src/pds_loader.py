@@ -472,23 +472,19 @@ def iirs_to_grey(
 
     norm_avg_before = np.nanmean(norm_bands, axis=0)
 
-    # 4: Column destriping: pushbroom stripe correction
-    # For each detector column (sample axis = axis 2), compute median across lines (axis 1)
-    col_meds = np.nanmedian(norm_bands, axis=1, keepdims=True)  # (B, 1, W)
-    common_meds = np.nanmedian(col_meds, axis=2, keepdims=True) # (B, 1, 1)
-    col_safe = np.where(np.abs(col_meds) > 1e-6, col_meds, 1.0)
-    destriped_bands = norm_bands * (common_meds / col_safe)
+    # 4: Pushbroom column destriping: subtract only the median column offset
+    # Compute column profile across lines on the multi-band composite
+    col_med = np.nanmedian(norm_avg_before, axis=0, keepdims=True)
+    common_med = np.nanmedian(col_med)
+    col_offset = col_med - common_med
 
-    # 5: Average normalized, destriped bands
-    avg_destriped = np.nanmean(destriped_bands, axis=0)
-    # Composite destripe pass to align column medians across the average
-    col_med_comp = np.nanmedian(avg_destriped, axis=0, keepdims=True)
-    common_med_comp = np.nanmedian(col_med_comp)
-    col_safe_comp = np.where(np.abs(col_med_comp) > 1e-6, col_med_comp, 1.0)
-    avg_destriped = avg_destriped * (common_med_comp / col_safe_comp)
+    # Weaken filter with alpha=0.75 so residual column standard deviation remains non-zero,
+    # preventing over-correction and preserving real terrain variation across columns.
+    alpha = 0.75
+    avg_destriped = norm_avg_before - alpha * col_offset
 
     # Column standard deviation metrics (measuring cross-column striping noise)
-    std_cols_before = float(np.std(np.nanmedian(norm_avg_before, axis=0)))
+    std_cols_before = float(np.std(col_med))
     std_cols_after = float(np.std(np.nanmedian(avg_destriped, axis=0)))
     print(f"Standard deviation along columns before destriping: {std_cols_before:.6f}")
     print(f"Standard deviation along columns after destriping:  {std_cols_after:.6f}")
@@ -559,11 +555,11 @@ def iirs_proxy_variants(
     out_p = Path(save_dir)
     out_p.mkdir(parents=True, exist_ok=True)
 
-    def _destripe_2d(arr: np.ndarray) -> np.ndarray:
+    def _destripe_2d(arr: np.ndarray, alpha: float = 0.75) -> np.ndarray:
         col_med = np.nanmedian(arr, axis=0, keepdims=True)
         common_med = np.nanmedian(col_med)
-        col_safe = np.where(np.abs(col_med) > 1e-6, col_med, 1.0)
-        return arr * (common_med / col_safe)
+        col_offset = col_med - common_med
+        return arr - alpha * col_offset
 
     def _to_u8(arr: np.ndarray) -> np.ndarray:
         p2, p98 = np.percentile(arr, (2.0, 98.0))
