@@ -602,14 +602,18 @@ if st.session_state.active_scene == "hop1":
 
         with st.expander("ℹ️ Ground-Truth Flight Metadata & Selenographic Footprints"):
             st.markdown(f"""
-            - **OHRC Product ID:** `ch2_ohr_ncp_20211023T0027462822_d_img_d18` (Calibrated Level-2, 0.26 m/px)
+            - **OHRC Product ID:** `ch2_ohr_ncp_20211023T0027462822_d_img_d18`
+              - Processing Level: **Calibrated (count calibrated, DN)** — Radiometric LUT applied to raw data. Note: per PRADAN PDS4 naming convention, `ncp` encodes Nadir/Oblique Panchromatic camera mode and mission phase, not processing level.
+              - Ground Sample Distance: **{active_data['ohrc_res']:.2f} m/px** (Panchromatic Visible)
               - Acquisition Time: `2021-10-23T00:27:46Z` | Orbit Limb: `Ascending` | Spacecraft Roll: `+15.76°` (Oblique mode)
               - Sun Elevation: `{active_data['ohrc_sun_elevation']:.1f}°` | Sun Azimuth: `{active_data['ohrc_sun_azimuth']:.1f}°`
-            - **TMC-2 Product ID:** `ch2_tmc_ncn_20230130T1900132182_d_img_d32` (Calibrated Level-2, 4.72 m/px)
+            - **TMC-2 Product ID:** `ch2_tmc_ncn_20230130T1900132182_d_img_d32`
+              - Processing Level: **Calibrated (count calibrated, DN)** — Radiometric correction applied. Note: per PRADAN PDS4 naming convention, `ncn` encodes Nadir camera mode and nominal mission phase, not processing level.
+              - Ground Sample Distance: **{active_data['tmc_res']:.2f} m/px** (Panchromatic Visible)
               - Acquisition Time: `2023-01-30T19:00:13Z` | Orbit Limb: `Ascending` | Spacecraft Roll: `-0.02°` (Nadir mode)
               - Sun Elevation: `{active_data['tmc_sun_elevation']:.1f}°` | Sun Azimuth: `{active_data['tmc_sun_azimuth']:.1f}°`
             - **Physical Ground Overlap:** Lat `-69.58019°`, Lon `32.28800°` (verified by official PDS4 Geometry Grid `.csv` files).
-            - **Cross-Illumination Offset:** 114.6° difference in solar azimuth angle (evaluating multi-modal shadow-invariant registration).
+            - **Cross-Illumination Offset:** 114.6° difference in solar azimuth angle; **15.8° spacecraft roll offset** (inducing topography parallax).
             """)
     else:
         active_data = bench_data
@@ -774,6 +778,12 @@ if st.session_state.active_scene == "hop1":
         img2 = active_data["disp_tmc"] if "disp_tmc" in active_data else active_data["tmc_disp"]
         H = active_data["H"]
 
+        target_gsd = float(active_data["tmc_res"])
+        rmse_px = float(active_data.get("reproj_rmse", 5.34 if is_flight_mode else 0.67))
+        rmse_m = rmse_px * target_gsd
+        thresh_px = float(active_data.get("inlier_threshold", 15.0 if is_flight_mode else 5.0))
+        thresh_m = thresh_px * target_gsd
+
         is_gated = (active_data["inlier_ratio"] < 15.0 or active_data["inliers"] < 20)
 
         if is_gated:
@@ -781,6 +791,7 @@ if st.session_state.active_scene == "hop1":
             <div class="status-banner-warning">
                 <strong>🛑 Gated: Inlier Consensus Below Reliability Threshold ({active_data['inlier_ratio']:.1f}% Inliers, {active_data['inliers']} of {active_data['total_matches']})</strong><br/>
                 Cross-instrument SIFT matching yields a <strong>{active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']})</strong>. This is below the threshold for a reliable geometric solution (minimum 15.0% inlier ratio and 20 consensus inliers required).
+                Ground reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_px:.2f} px in the TMC-2 frame at {target_gsd:.2f} m/px). The problem statement targets correspondence at OHRC scale (0.26 m/px).
                 The registration shown is illustrative of the pipeline, not a validated result.
                 Registration overlay and reprojection RMSE are withheld to maintain scientific validity; unconstrained transforms are rejected, exactly as in the polar SNR gate.
             </div>
@@ -788,10 +799,12 @@ if st.session_state.active_scene == "hop1":
 
             st.markdown(f"""
             <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                <h4 style="margin-top:0; color:#1a1a2e;">Why Inlier Gating Demonstrates Scientific Maturity:</h4>
+                <h4 style="margin-top:0; color:#1a1a2e;">Why Inlier Gating Demonstrates Scientific Maturity (Hop 1: OHRC ↔ TMC-2):</h4>
                 <ul style="color:#555; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
                     <li><strong>Inlier Ratio Gate:</strong> {active_data['inliers']} inliers out of {active_data['total_matches']} candidate matches ({active_data['inlier_ratio']:.1f}%) represents a matching failure driven by the 18.15× resolution gap and 114.6° solar illumination disparity.</li>
-                    <li><strong>Candidate Fit:</strong> A 4-DoF {active_data.get('transform_type', 'Similarity Transform')} fitted to {active_data['inliers']} inliers yields a candidate reprojection residual of {active_data.get('reproj_rmse', 5.34):.2f} px against a {active_data.get('inlier_threshold', 15.0):.1f} px threshold. With only {active_data['inliers']} points, the transformation remains mathematically unvalidated.</li>
+                    <li><strong>Threshold Widened:</strong> MAGSAC++ threshold was widened to {thresh_px:.1f} px ({thresh_m:.1f} m ground error) from the initial value of 5.0 px (23.6 m) to admit any consensus at all. Even at this tolerance the inlier ratio remains below the reliability gate.</li>
+                    <li><strong>Candidate Ground Error:</strong> A 4-DoF {active_data.get('transform_type', 'Similarity Transform')} fitted to {active_data['inliers']} inliers yields a candidate reprojection residual of {rmse_px:.2f} px ({rmse_m:.1f} m ground error at {target_gsd:.2f} m/px) against the {thresh_px:.1f} px ({thresh_m:.1f} m) threshold. With only {active_data['inliers']} points, the transformation remains mathematically unvalidated.</li>
+                    <li><strong>Physical Geometry & Parallax:</strong> OHRC was acquired at +15.76° roll; TMC-2 at −0.02° roll. This 15.8° viewing-angle difference over crater relief induces parallax that a 4-DoF similarity transform cannot model. Combined with the 114.6° solar azimuth difference, the low inlier ratio is consistent with the acquisition geometry rather than with a matcher defect. Correcting for it requires the topography-aware non-rigid stage (TPS with a DEM prior) described in the architecture.</li>
                     <li><strong>Operational Safety:</strong> In autonomous planetary descent, knowing when a geometric solution lacks sufficient consensus prevents navigation divergence. The overlay is withheld to prevent misleading operators.</li>
                 </ul>
             </div>
@@ -805,7 +818,7 @@ if st.session_state.active_scene == "hop1":
 
             st.markdown(f"""
             <div class="presenter-box">
-                <strong>💡 Flight Validation Summary:</strong> Cross-instrument SIFT matching yields a {active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']}). This is below the threshold for a reliable geometric solution. The registration shown is illustrative of the pipeline, not a validated result.
+                <strong>💡 Flight Validation Summary:</strong> Cross-instrument SIFT matching yields a {active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']}). Ground reprojection error is {rmse_m:.1f} m ({rmse_px:.2f} px at {target_gsd:.2f} m/px), while the problem statement targets correspondence at OHRC scale (0.26 m/px). This is below the threshold for a reliable geometric solution. The registration shown is illustrative of the pipeline, not a validated result.
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -830,9 +843,7 @@ if st.session_state.active_scene == "hop1":
             with c_reg1:
                 render_image(overlay, "False-Color Registration Overlay (Red: OHRC, Cyan: TMC-2)", cmap=None)
             with c_reg2:
-                reproj_val = active_data.get("reproj_rmse", 0.67)
-                thresh_val = active_data.get("inlier_threshold", 5.0)
-                st.markdown(metric_card("Reprojection RMSE", f"{reproj_val:.2f} px", f"Inlier Point Residual / {thresh_val:.1f} px Threshold"), unsafe_allow_html=True)
+                st.markdown(metric_card("Reprojection Error", f"{rmse_px:.2f} px ({rmse_m:.1f} m)", f"Target GSD {target_gsd:.2f} m/px | {thresh_px:.1f} px ({thresh_m:.1f} m) threshold"), unsafe_allow_html=True)
                 st.markdown("<br/>", unsafe_allow_html=True)
                 st.markdown(metric_card("Intensity Discrepancy", f"{mean_abs_intensity_diff:.2f} DN", "Mean Absolute Intensity Discrepancy (DN)"), unsafe_allow_html=True)
                 st.markdown("<br/>", unsafe_allow_html=True)
@@ -842,9 +853,9 @@ if st.session_state.active_scene == "hop1":
                 t_dof = active_data.get("transform_dof", 8)
                 st.markdown(metric_card("Transform Type", t_type, f"Degrees of Freedom: {t_dof}"), unsafe_allow_html=True)
 
-            st.markdown("""
+            st.markdown(f"""
             <div class="presenter-box">
-                <strong>💡 Benchmark Validation Summary:</strong> Controlled 20× optical downsampling demonstrates scale-invariance with 96.2% inlier consensus (77 of 80) and 0.67 px reprojection error.
+                <strong>💡 Benchmark Validation Summary:</strong> Controlled 20× optical downsampling demonstrates scale-invariance with 96.2% inlier consensus (77 of 80) and {rmse_px:.2f} px ({rmse_m:.1f} m) reprojection error against a {thresh_px:.1f} px ({thresh_m:.1f} m) threshold.
             </div>
             """, unsafe_allow_html=True)
 
@@ -910,11 +921,11 @@ elif st.session_state.active_scene == "hop2":
             | Parameter | Sensor 1: Real TMC-2 Nadir Strip | Sensor 2: Real IIRS Hyperspectral Cube | Gap / Disparity |
             | :--- | :--- | :--- | :--- |
             | **Product Identifier** | `ch2_tmc_ncn_20230130T1900132182_d_img_d32` | `ch2_iir_nri_20231003T2152304115_d_img_d18` | Dual Independent Sensors |
-            | **Processing Level** | Calibrated Level-2 (`ncn`, Reflectance) | **Raw Level-1 (`nri`)** — Radiometric calibration not applied; values are raw DN | Sensor Calibration Status |
+            | **Processing Level** | **Calibrated (count calibrated, DN)** | **Raw Level-1 (`nri`)** — Radiometric calibration not applied; values are raw DN | Sensor Calibration Status |
             | **Ground Sample Distance (GSD)** | **4.72 m/pixel** (Panchromatic Visible) | **68.38 m/pixel** (256 SWIR Bands) | **14.49× Optical Scale Ratio** (3.86 Octaves) |
             | **Observation Timestamp** | 2023-01-30T19:00:13Z | 2023-10-03T21:52:30Z | Independent Orbits |
             | **Solar Illumination** | Azimuth: 53.0° / Elevation: 17.2° | Azimuth: 277.2° / Elevation: 2.29° | **135.8° Azimuth Disparity** |
-            | **Measured SWIR Counts** | N/A (Visible 0.5–0.8 µm) | Mean: {flight_h2['iirs_mean_dn']:.1f} DN / Max: {flight_h2['iirs_max_dn']:.1f} DN (Raw uncalibrated DN) | **14× Above Polar Noise Floor** |
+            | **Measured SWIR Counts** | N/A (Visible 0.5–0.8 µm) | Mean: {flight_h2['iirs_mean_dn']:.1f} DN, uncalibrated. Raw counts include dark current and bias offset and are not comparable to the calibrated radiance figures reported for the north polar pair. | Raw Counts (DN) |
             | **Target Center Coordinates** | Lat -70.85°S, Lon 32.26°E | Lat -70.85°S, Lon 32.26°E | **Exact Selenographic Ground Coincidence** |
             """)
 
@@ -1038,18 +1049,21 @@ elif st.session_state.active_scene == "hop2":
             img2 = flight_h2["disp_iirs"]
             H = flight_h2["H"]
 
+            target_gsd = float(flight_h2["iir_res"])
+            thresh_px = float(flight_h2.get("inlier_threshold", 20.0))
+            thresh_m = thresh_px * target_gsd
+            rmse_val = float(flight_h2["reproj_rmse"])
+            rmse_m = rmse_val * target_gsd
+            ratio_of_thresh = (rmse_val / thresh_px) * 100.0
+
             is_gated = (flight_h2["inlier_ratio"] < 15.0 or flight_h2["inliers"] < 20)
 
             if is_gated:
-                thresh = flight_h2.get("inlier_threshold", 20.0)
-                rmse_val = flight_h2["reproj_rmse"]
-                ratio_of_thresh = (rmse_val / thresh) * 100.0
-
                 st.markdown(f"""
                 <div class="status-banner-warning">
                     <strong>🛑 Gated: Inlier Consensus Below Reliability Threshold ({flight_h2['inlier_ratio']:.1f}% Inliers, {flight_h2['inliers']} of {flight_h2['total_matches']})</strong><br/>
                     Cross-instrument SIFT matching yields a <strong>{flight_h2['inlier_ratio']:.1f}% inlier ratio ({flight_h2['inliers']} of {flight_h2['total_matches']})</strong>. This is below the threshold for a reliable geometric solution (minimum 15.0% inlier ratio and 20 consensus inliers required).
-                    Candidate inliers yield a reprojection error of <strong>{rmse_val:.2f} px / {thresh:.2f} px</strong> ({ratio_of_thresh:.1f}% of threshold), indicating that the solution is only marginally constrained by the threshold itself.
+                    Ground reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_val:.2f} px in the IIRS frame at {target_gsd:.2f} m/px). The problem statement targets correspondence at OHRC scale (0.26 m/px).
                     Registration overlay and reprojection RMSE are withheld to maintain scientific validity; fabricated matches and unconstrained transforms are rejected. The registration shown is illustrative of the pipeline, not a validated result.
                 </div>
                 """, unsafe_allow_html=True)
@@ -1059,9 +1073,10 @@ elif st.session_state.active_scene == "hop2":
                     <h4 style="margin-top:0; color:#1a1a2e;">Why Inlier Gating Demonstrates Scientific Maturity (Hop 2: TMC-2 ↔ IIRS):</h4>
                     <ul style="color:#555; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
                         <li><strong>Inlier Ratio Gate:</strong> At {flight_h2['inlier_ratio']:.1f}% inlier consensus ({flight_h2['inliers']} inliers from {flight_h2['total_matches']} candidate correspondences), the candidate set is dominated by cross-modal noise and extreme illumination disparities (135.8° azimuth offset).</li>
-                        <li><strong>Threshold Constraint Ratio:</strong> Candidate reprojection RMSE is {rmse_val:.2f} px against a {thresh:.2f} px threshold ({ratio_of_thresh:.1f}% of threshold). Because the RMSE is a substantial fraction of the inlier threshold, the solution is only marginally constrained by the threshold filter itself.</li>
+                        <li><strong>Threshold Widened:</strong> MAGSAC++ threshold was widened to {thresh_px:.1f} px ({thresh_m:.1f} m ground error) from the initial value of 8.0 px (547.0 m) to admit any consensus at all. Even at this tolerance the inlier ratio remains below the reliability gate.</li>
+                        <li><strong>Threshold Constraint Ratio:</strong> Candidate reprojection error is {rmse_val:.2f} px ({rmse_m:.1f} m ground error) against a {thresh_px:.1f} px ({thresh_m:.1f} m) threshold ({ratio_of_thresh:.1f}% of threshold). Because the RMSE is a substantial fraction of the inlier threshold, the solution is only marginally constrained by the threshold filter itself.</li>
                         <li><strong>Estimated Transform Model:</strong> {flight_h2.get('transform_type', 'Similarity Transform')} (Degrees of Freedom: {flight_h2.get('transform_dof', 4)}). With only {flight_h2['inliers']} inliers, even a 4-DoF model carries significant parameter uncertainty.</li>
-                        <li><strong>Raw Radiometric Level:</strong> IIRS product <code>{flight_h2['iirs_id']}</code> is raw Level-1 (<code>nri</code>), not calibrated. Pixel values represent uncalibrated raw DN rather than surface reflectance.</li>
+                        <li><strong>Raw Radiometric Level:</strong> IIRS product <code>{flight_h2['iirs_id']}</code> is raw Level-1 (<code>nri</code>), not calibrated. Pixel values represent uncalibrated raw DN (mean {flight_h2['iirs_mean_dn']:.1f} DN) rather than surface reflectance or calibrated radiance.</li>
                         <li><strong>Operational Safety:</strong> Autonomous withholding of unvalidated transforms prevents navigation divergence in lunar descent.</li>
                     </ul>
                 </div>
@@ -1075,7 +1090,7 @@ elif st.session_state.active_scene == "hop2":
 
                 st.markdown(f"""
                 <div class="presenter-box">
-                    <strong>💡 Flight Validation Summary:</strong> Cross-instrument SIFT matching yields a {flight_h2['inlier_ratio']:.1f}% inlier ratio ({flight_h2['inliers']} of {flight_h2['total_matches']}). This is below the threshold for a reliable geometric solution. The registration shown is illustrative of the pipeline, not a validated result.
+                    <strong>💡 Flight Validation Summary:</strong> Cross-instrument SIFT matching yields a {flight_h2['inlier_ratio']:.1f}% inlier ratio ({flight_h2['inliers']} of {flight_h2['total_matches']}). Ground reprojection error is {rmse_m:.1f} m ({rmse_val:.2f} px at {target_gsd:.2f} m/px), while the problem statement targets correspondence at OHRC scale (0.26 m/px). This is below the threshold for a reliable geometric solution. The registration shown is illustrative of the pipeline, not a validated result.
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -1099,10 +1114,8 @@ elif st.session_state.active_scene == "hop2":
                 with c_reg1:
                     render_image(overlay, "False-Color Registration Overlay (Red: TMC-2, Cyan: IIRS)", cmap=None)
                 with c_reg2:
-                    thresh = flight_h2.get("inlier_threshold", 20.0)
-                    rmse_val = flight_h2["reproj_rmse"]
-                    ratio_flag = "⚠️ Marginal (>50% of thresh)" if (rmse_val / thresh) > 0.5 else "Constrained fit"
-                    st.markdown(metric_card("Reprojection RMSE", f"{rmse_val:.2f} px", f"{rmse_val:.2f} px / {thresh:.2f} px ({ratio_flag})"), unsafe_allow_html=True)
+                    ratio_flag = "⚠️ Marginal (>50% of thresh)" if (rmse_val / thresh_px) > 0.5 else "Constrained fit"
+                    st.markdown(metric_card("Reprojection Error", f"{rmse_val:.2f} px ({rmse_m:.1f} m)", f"{rmse_val:.2f} px / {thresh_px:.1f} px ({thresh_m:.1f} m, {ratio_flag})"), unsafe_allow_html=True)
                     st.markdown("<br/>", unsafe_allow_html=True)
                     st.markdown(metric_card("Intensity Discrepancy", f"{mean_abs_intensity_diff:.2f} DN", "Mean Absolute Intensity Discrepancy (DN)"), unsafe_allow_html=True)
                     st.markdown("<br/>", unsafe_allow_html=True)
@@ -1114,7 +1127,7 @@ elif st.session_state.active_scene == "hop2":
 
                 st.markdown(f"""
                 <div class="presenter-box">
-                    <strong>💡 Flight Validation Summary:</strong> Cross-instrument SIFT matching yields a {flight_h2['inlier_ratio']:.1f}% inlier ratio ({flight_h2['inliers']} of {flight_h2['total_matches']}). This is below the threshold for a reliable geometric solution. The registration shown is illustrative of the pipeline, not a validated result.
+                    <strong>💡 Flight Validation Summary:</strong> Cross-instrument SIFT matching yields a {flight_h2['inlier_ratio']:.1f}% inlier ratio ({flight_h2['inliers']} of {flight_h2['total_matches']}). Ground reprojection error is {rmse_m:.1f} m ({rmse_val:.2f} px at {target_gsd:.2f} m/px). This is below the threshold for a reliable geometric solution. The registration shown is illustrative of the pipeline, not a validated result.
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1151,7 +1164,7 @@ elif st.session_state.active_scene == "hop2":
             | Parameter | Sensor 1: Real TMC-2 Nadir Strip | Sensor 2: Real IIRS Hyperspectral Cube | Gap / Disparity |
             | :--- | :--- | :--- | :--- |
             | **Product Identifier** | `ch2_tmc_ncn_20230528T1712292966_d_img_d32` | `ch2_iir_nci_20230615T0132312064_d_img_n18` | Dual Independent Sensors |
-            | **Processing Level** | Calibrated Level-2 (`ncn`) | Calibrated Level-2 (`nci`) | Calibrated Radiometry |
+            | **Processing Level** | **Calibrated (count calibrated, DN)** | **Calibrated Level-2 (`nci`)** | Calibrated Radiometry |
             | **Ground Sample Distance (GSD)** | **4.96 m/pixel** (Panchromatic Visible) | **91.75 m/pixel** (256 SWIR Bands) | **18.50× Optical Scale Ratio** |
             | **Observation Timestamp** | 2023-05-28T17:12:29Z | 2023-06-15T01:32:31Z | Independent Polar Passes |
             | **Solar Illumination** | Elevation: 13.1° (76.9° Incidence) | Elevation: 13.1° (76.9° Incidence) | Extreme Low-Angle Grazing |
@@ -1322,6 +1335,9 @@ elif st.session_state.active_scene == "overview":
         <p style="font-size: 1.15rem; color:#DE7356; font-family: monospace; font-weight: 700; margin: 0.8rem 0;">
             T(OHRC → IIRS) = T(TMC-2 → IIRS) · T(OHRC → TMC-2)
         </p>
+        <p style="color:#B45309; background:#FEF3C7; border: 1px solid #FDE68A; border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0.6rem auto; text-align:left; line-height:1.55;">
+            <strong>⚠️ Composition Disclaimer:</strong> Composition requires all three instruments over common ground. Hop 1 (−69.58°S) and Hop 2 (−70.85°S) lie along the same TMC-2 strip but roughly <strong>140 km apart</strong>; no such triple overlap has been located in the accessible archive.
+        </p>
         <p style="color:#065F46; background:#ECFDF5; border: 1px solid #A7F3D0; border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0 auto; text-align:left; line-height:1.55;">
             <strong>🚀 Dual-Gate Scientific Integrity:</strong> Both Hop 1 (OHRC ↔ TMC-2, 18.15×) and Hop 2 (TMC-2 ↔ IIRS, 14.49×) use 4-DoF Similarity Transforms (scale, rotation, translation) suited to orbital pushbroom cameras. Autonomous inlier ratio gating (&lt;15% ratio or &lt;20 inliers) prevents misleading overlays on low-consensus flight pairs, while the North Polar SNR gate (SNR ≈ 1.4) rejects noise-dominated regolith.
         </p>
@@ -1334,13 +1350,13 @@ elif st.session_state.active_scene == "overview":
         <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
             <h4 style="color:#1a1a2e; margin-top:0;">1. Hop 1: Scale Invariance & Inlier Gating (18.15× Gap)</h4>
             <p style="color:#555; font-size:0.88rem; line-height:1.6;">
-                Evaluated on authentic OHRC (0.26 m/px) and TMC-2 (4.72 m/px) flight data at Shiv Shakti Point with a 4-DoF Similarity Transform. Gated at 1.2% inlier ratio (5 of 409) to prevent unconstrained divergence, alongside a verified 20× single-sensor optical benchmark (96.2% consensus, 0.67 px RMSE).
+                Evaluated on authentic OHRC (0.26 m/px) and TMC-2 (4.72 m/px) flight data at Shiv Shakti Point with a 4-DoF Similarity Transform. Gated at 1.2% inlier ratio (5 of 409, RMSE 5.34 px = 25.2 m ground error against 15.0 px = 70.8 m threshold) to prevent unconstrained divergence, alongside a verified 20× single-sensor optical benchmark (96.2% consensus, 0.67 px = 3.5 m RMSE).
             </p>
         </div>
         <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
             <h4 style="color:#1a1a2e; margin-top:0;">2. Hop 2: Cross-Modal Gating & Noise Floor Baseline</h4>
             <p style="color:#555; font-size:0.88rem; line-height:1.6;">
-                Evaluated on co-located South Pole TMC-2 (4.72 m/px) and raw IIRS (68.38 m/px) flight products (1000–1600 nm proxy, 109.6 DN radiance, 4-DoF Similarity Transform). Scientifically gated at 2.2% inlier ratio (7 of 315, RMSE 8.92 px / 20.00 px threshold), paired with North Polar (89.7°N) SNR gating (SWIR SNR ≈ 1.4).
+                Evaluated on co-located South Pole TMC-2 (4.72 m/px) and raw IIRS (68.38 m/px) flight products (1000–1600 nm proxy, 109.6 raw DN counts, 4-DoF Similarity Transform). Scientifically gated below reliability threshold (RMSE 8.92 px in the IIRS frame = 610.0 m ground error against 20.0 px = 1,367.6 m threshold), paired with North Polar (89.7°N) SNR gating (SWIR SNR ≈ 1.4).
             </p>
         </div>
         <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
