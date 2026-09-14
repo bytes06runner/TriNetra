@@ -4,3 +4,17 @@ outputs/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Model checkpoints and weights (>100MB)
+models/*.pt
+models/*.pth
+models/*.ckpt
+*.pt
+*.pth
+*.ckpt
+!models/README.md
+!models/.gitkeep
+
+# Checkpoint directories
+kaggle_checkpoints/*.pt
+kaggle_checkpoints/*.pth

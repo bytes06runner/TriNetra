@@ -8,7 +8,12 @@ import os
 import cv2
 
 from src.module2_matching.base_matcher import MatchResult
-from src.module4_registration.registration import GeometricRegistrar, RegistrationResult
+from src.module4_registration.registration import (
+    GeometricRegistrar,
+    RegistrationResult,
+    evaluate_flight_gate,
+    check_degeneracy,
+)
 from src.module5_confidence.visualizer import ExplainabilityVisualizer
 
 
@@ -134,3 +139,37 @@ class TestExplainabilityVisualizer:
         
         assert save_path.exists()
         assert save_path.stat().st_size > 0
+
+
+class TestFlightGateAndDegeneracy:
+    def test_flight_safety_gate_rejects_sub_threshold(self):
+        # Hop 2 EfficientLoFTR: 15 inliers, 11.0% inlier ratio
+        res = evaluate_flight_gate(inliers=15, total_matches=137, inlier_ratio_pct=11.0)
+        assert res["is_gated"] is True
+        assert res["status"] == "GATED"
+
+    def test_flight_safety_gate_passes_strict_threshold(self):
+        # 25 inliers out of 100 matches = 25.0%
+        res = evaluate_flight_gate(inliers=25, total_matches=100, inlier_ratio_pct=25.0)
+        assert res["is_gated"] is False
+        assert res["status"] == "PASSED"
+
+    def test_degeneracy_catches_low_dof(self):
+        # 4-DoF similarity requires at least 8 inliers (2 * DoF)
+        # 5 inliers with 4-DoF transform is statistically degenerate
+        res = check_degeneracy(inliers=5, raw_matches=409, rmse=5.34, transform_dof=4)
+        assert res["is_degenerate"] is True
+        assert res["status"] == "DEGENERATE"
+
+    def test_degeneracy_catches_near_zero_rmse_artifact(self):
+        # 4 inliers with 0.00 px RMSE is an unconstrained artifact
+        res = check_degeneracy(inliers=4, raw_matches=12, rmse=0.00, transform_dof=4)
+        assert res["is_degenerate"] is True
+        assert res["status"] == "DEGENERATE"
+
+    def test_degeneracy_valid_dense_solution(self):
+        # 25 inliers, 150 raw matches, 1.8 px RMSE
+        res = check_degeneracy(inliers=25, raw_matches=150, rmse=1.8, transform_dof=4)
+        assert res["is_degenerate"] is False
+        assert res["status"] == "VALID"
+

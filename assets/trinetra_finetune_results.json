@@ -1,0 +1,91 @@
+{
+  "model": "EfficientLoFTR fine-tuned on synthetic DEM illumination pairs",
+  "init_weights": "MatchAnything-ELoFTR",
+  "training_data": "15,000 synthetic pairs from LOLA 5m DEM, lunar south pole",
+  "eval_product_pair": "ch2_ohr_ncp_20241115T1525004388 / ch2_tmc_ncn_20231205T1906512971",
+  "gate_threshold": {
+    "min_ratio_pct": 15.0,
+    "min_inliers": 20
+  },
+  "baselines_zeroshot": {
+    "sift_ratio_pct": 1.2,
+    "sift_inliers": 5,
+    "best_deep_inliers": 6,
+    "all_12_configs_gated": true
+  },
+  "best_checkpoint": "ckpt_best.pt (epoch 7)",
+  "best_result": {
+    "raw_matches": 217,
+    "inliers": 49,
+    "ratio_pct": 22.6,
+    "gate_cleared": true,
+    "cv2_rng_seed": 42,
+    "note": "Deterministic seeded evaluation (seed 42) produces 49 inliers (22.6%). Unseeded Kaggle run produced 53 (24.4%). Both clear the spaceflight gate."
+  },
+  "stopped_early_at_epoch": 17,
+  "stop_reason": "validation loss rising from 0.1213 to 0.2156 while train loss fell; real-flight inliers degrading 53 -> 21. Overfitting on 15k synthetic pairs.",
+  "epochs": [
+    {
+      "epoch": 7,
+      "raw_matches": 217,
+      "inliers": 53,
+      "ratio_pct": 24.4,
+      "gate_cleared": true,
+      "val_loss": 0.1213,
+      "val_ratio_pct": 51.6,
+      "train_loss": 4.8862,
+      "note": "best val loss, ckpt_best.pt"
+    },
+    {
+      "epoch": 8,
+      "raw_matches": 75,
+      "inliers": 31,
+      "ratio_pct": 41.3,
+      "gate_cleared": true,
+      "val_loss": 0.1704,
+      "val_ratio_pct": 45.0,
+      "train_loss": 4.7505
+    },
+    {
+      "epoch": 9,
+      "raw_matches": 169,
+      "inliers": 40,
+      "ratio_pct": 23.7,
+      "gate_cleared": true,
+      "val_loss": 0.1609,
+      "val_ratio_pct": 30.2,
+      "train_loss": 5.4049
+    },
+    {
+      "epoch": 14,
+      "raw_matches": 105,
+      "inliers": 20,
+      "ratio_pct": 19.0,
+      "gate_cleared": true,
+      "val_loss": 0.1868,
+      "val_ratio_pct": 45.0,
+      "train_loss": 4.0494
+    },
+    {
+      "epoch": 15,
+      "raw_matches": 122,
+      "inliers": 23,
+      "ratio_pct": 18.9,
+      "gate_cleared": true,
+      "val_loss": 0.2156,
+      "val_ratio_pct": 30.9,
+      "train_loss": 4.3713
+    },
+    {
+      "epoch": 16,
+      "raw_matches": 75,
+      "inliers": 21,
+      "ratio_pct": 28.0,
+      "gate_cleared": true,
+      "val_loss": 0.2141,
+      "val_ratio_pct": 33.4,
+      "train_loss": 4.5078
+    }
+  ],
+  "saved_at": "2026-09-14T12:11:28.355278"
+}

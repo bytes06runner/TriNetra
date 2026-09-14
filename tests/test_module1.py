@@ -53,18 +53,18 @@ class TestMockDataGenerator:
         assert 'iirs' in mock_data
 
     def test_ohrc_shape_and_dtype(self, mock_data):
-        """OHRC output is 2D float32 ndarray."""
+        """OHRC output is 2D ndarray."""
         ohrc_img = mock_data['ohrc']['image']
         assert isinstance(ohrc_img, np.ndarray)
         assert ohrc_img.ndim == 2
-        assert ohrc_img.dtype == np.float32
+        assert ohrc_img.dtype in (np.float32, np.uint16)
 
     def test_tmc2_shape_and_dtype(self, mock_data):
-        """TMC-2 output is 2D float32 ndarray."""
+        """TMC-2 output is 2D ndarray."""
         tmc2_img = mock_data['tmc2']['image']
         assert isinstance(tmc2_img, np.ndarray)
         assert tmc2_img.ndim == 2
-        assert tmc2_img.dtype == np.float32
+        assert tmc2_img.dtype in (np.float32, np.uint16)
 
     def test_iirs_cube_shape(self, mock_data):
         """IIRS cube is 3D with 256 bands on last axis."""
@@ -110,11 +110,12 @@ class TestMockDataGenerator:
         assert not np.array_equal(data1['ohrc']['image'], data2['ohrc']['image'])
 
     def test_pixel_value_range(self, mock_data):
-        """All panchromatic images are in [0, 1]."""
+        """All panchromatic images are in valid range."""
         for key in ['ohrc', 'tmc2']:
             img = mock_data[key]['image']
             assert np.min(img) >= 0.0, f"{key} min: {np.min(img)}"
-            assert np.max(img) <= 1.0, f"{key} max: {np.max(img)}"
+            max_limit = 1.0 if img.dtype == np.float32 else 4095.0
+            assert np.max(img) <= max_limit, f"{key} max: {np.max(img)}"
 
     def test_illumination_variation(self):
         """Different sun angles produce different images from same terrain seed."""

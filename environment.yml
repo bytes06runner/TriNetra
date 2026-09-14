@@ -1,0 +1,24 @@
+name: trinetra
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - gdal
+  - libgdal
+  - rasterio
+  - opencv
+  - matplotlib
+  - pytorch::pytorch
+  - torchvision
+  - kornia
+  - streamlit
+  - requests
+  - tqdm
+  - pandas
+  - h5py
+  - pip
+  - pip:
+    - git+https://github.com/cvg/LightGlue.git

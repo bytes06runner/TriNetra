@@ -30,6 +30,8 @@ class RegistrationResult:
     rmse: float                        # Root Mean Square Error of the fit
     match_result: MatchResult          # The underlying match result
     success: bool
+    status: str = "PENDING"            # 'PASSED', 'GATED', 'DEGENERATE', 'FAILED'
+    inlier_ratio_pct: float = 0.0
 
     @classmethod
     def empty(cls, match_result: MatchResult) -> "RegistrationResult":
@@ -41,8 +43,65 @@ class RegistrationResult:
             num_inliers=0,
             rmse=float('inf'),
             match_result=match_result,
-            success=False
+            success=False,
+            status="FAILED",
+            inlier_ratio_pct=0.0
         )
+
+
+def evaluate_flight_gate(inliers: int, total_matches: int, inlier_ratio_pct: Optional[float] = None) -> dict:
+    """Evaluate whether a correspondence set satisfies spaceflight safety gates.
+
+    Flight Safety Rule:
+        A transform is gated (withheld from autonomous navigation) if:
+        inlier_ratio_pct < 15.0%  OR  inliers < 20.
+    """
+    if inlier_ratio_pct is None:
+        inlier_ratio_pct = (inliers / total_matches * 100.0) if total_matches > 0 else 0.0
+    
+    is_gated = (inlier_ratio_pct < 15.0 or inliers < 20)
+    return {
+        "is_gated": is_gated,
+        "status": "GATED" if is_gated else "PASSED",
+        "inliers": inliers,
+        "total_matches": total_matches,
+        "inlier_ratio_pct": float(inlier_ratio_pct),
+        "reason": "inliers < 20 or ratio < 15%" if is_gated else "Meets flight safety requirements"
+    }
+
+
+def check_degeneracy(inliers: int, raw_matches: int, rmse: float, transform_dof: int = 4) -> dict:
+    """Check whether an estimated geometric transformation is mathematically degenerate.
+
+    Mathematical Degeneracy Suppression Rules:
+        1. Degrees of Freedom Rule: inliers < 2 * transform_dof
+           (e.g. requires >= 8 inliers for 4-DoF similarity, >= 16 inliers for 8-DoF homography).
+        2. Residual Clamp Rule: rmse < 0.10 px and inliers < 8
+           (identifies overfitted degenerate fits where residual collapses to ~0).
+        3. Minimum Raw Matches: raw_matches < 8 -> suppress ratio.
+    """
+    reasons = []
+    is_degenerate = False
+
+    if inliers < 2 * transform_dof:
+        is_degenerate = True
+        reasons.append(f"Inliers ({inliers}) < 2 * DoF ({2 * transform_dof})")
+
+    if rmse < 0.10 and inliers < 8:
+        is_degenerate = True
+        reasons.append(f"Overfitted residual ({rmse:.2f} px) with too few inliers ({inliers})")
+
+    if raw_matches < 8:
+        is_degenerate = True
+        reasons.append(f"Raw candidate matches ({raw_matches}) < 8")
+
+    return {
+        "is_degenerate": is_degenerate,
+        "status": "DEGENERATE" if is_degenerate else "VALID",
+        "reasons": reasons,
+        "suppress_metrics": is_degenerate
+    }
+
 
 
 class GeometricRegistrar:
@@ -102,7 +161,7 @@ class GeometricRegistrar:
             matrix, mask = cv2.estimateAffinePartial2D(
                 pts_src,
                 pts_dst,
-                method=cv2.USAC_MAGSAC,
+                method=cv2.RANSAC,
                 ransacReprojThreshold=self.reproj_thresh,
                 maxIters=self.max_iters,
                 confidence=self.confidence

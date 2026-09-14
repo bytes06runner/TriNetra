@@ -1,0 +1,92 @@
+[
+  {
+    "matcher": "SIFT Canonical (4-DoF)",
+    "hop": "Polar Hop 1 (OHRC\u2194TMC-2)",
+    "raw_matches": 372,
+    "inliers": 6,
+    "inlier_ratio_pct": null,
+    "rmse_px": null,
+    "rmse_m": null,
+    "unfiltered_ratio_pct": 1.61,
+    "unfiltered_rmse_px": 5.53,
+    "unfiltered_rmse_m": 23.5,
+    "runtime_s": 0.45,
+    "device": "CPU",
+    "license": "BSD-3-Clause",
+    "status": "DEGENERATE",
+    "is_gated": true,
+    "is_degenerate": true,
+    "degeneracy_reasons": [
+      "Inliers (6) < 2 * DoF (8)"
+    ],
+    "gate_reason": "inliers < 20 or ratio < 15%",
+    "cv2_rng_seed": 42
+  },
+  {
+    "matcher": "LightGlue + SuperPoint (4-DoF)",
+    "hop": "Polar Hop 1 (OHRC\u2194TMC-2)",
+    "raw_matches": 30,
+    "inliers": 8,
+    "inlier_ratio_pct": 26.67,
+    "rmse_px": 6.12,
+    "rmse_m": 26.0,
+    "unfiltered_ratio_pct": 26.67,
+    "unfiltered_rmse_px": 6.12,
+    "unfiltered_rmse_m": 26.0,
+    "runtime_s": 0.73,
+    "device": "MPS",
+    "license": "Apache-2.0 / Non-Commercial",
+    "status": "GATED",
+    "is_gated": true,
+    "is_degenerate": false,
+    "degeneracy_reasons": [],
+    "gate_reason": "inliers < 20 or ratio < 15%",
+    "cv2_rng_seed": 42
+  },
+  {
+    "matcher": "EfficientLoFTR (4-DoF)",
+    "hop": "Polar Hop 1 (OHRC\u2194TMC-2)",
+    "raw_matches": 35,
+    "inliers": 4,
+    "inlier_ratio_pct": null,
+    "rmse_px": null,
+    "rmse_m": null,
+    "unfiltered_ratio_pct": 11.43,
+    "unfiltered_rmse_px": 5.23,
+    "unfiltered_rmse_m": 22.2,
+    "runtime_s": 4.44,
+    "device": "MPS",
+    "license": "Apache-2.0",
+    "status": "DEGENERATE",
+    "is_gated": true,
+    "is_degenerate": true,
+    "degeneracy_reasons": [
+      "Inliers (4) < 2 * DoF (8)"
+    ],
+    "gate_reason": "inliers < 20 or ratio < 15%",
+    "cv2_rng_seed": 42
+  },
+  {
+    "matcher": "MatchAnything (4-DoF)",
+    "hop": "Polar Hop 1 (OHRC\u2194TMC-2)",
+    "raw_matches": 44,
+    "inliers": 5,
+    "inlier_ratio_pct": null,
+    "rmse_px": null,
+    "rmse_m": null,
+    "unfiltered_ratio_pct": 11.36,
+    "unfiltered_rmse_px": 7.02,
+    "unfiltered_rmse_m": 29.8,
+    "runtime_s": 3.83,
+    "device": "MPS",
+    "license": "Apache-2.0",
+    "status": "DEGENERATE",
+    "is_gated": true,
+    "is_degenerate": true,
+    "degeneracy_reasons": [
+      "Inliers (5) < 2 * DoF (8)"
+    ],
+    "gate_reason": "inliers < 20 or ratio < 15%",
+    "cv2_rng_seed": 42
+  }
+]
