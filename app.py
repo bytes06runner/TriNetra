@@ -2037,7 +2037,7 @@ elif st.session_state.active_scene == "hop2":
                 <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
                     <h4 style="margin-top:0; color:#1E1E24;">Design-Level Multi-Hop Composition Target</h4>
                     <p style="color:#4A4740; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
-                        <strong>End-to-End Multi-Hop Composition Note:</strong> Hop 1 (69.58°S) and Hop 2 (70.90°S) were evaluated on authentic flight targets <strong>~38.5 km apart</strong> along the continuous Chandrayaan-2 TMC-2 coverage strip to rigorously validate both intra-sensor and cross-modal regimes. In an operational flight pipeline, multi-hop composition chains these transformations (OHRC → TMC-2 → IIRS) across overlapping spatial footprints to establish global georeferenced coordinates from high-resolution local landings.
+                        <strong>End-to-End Multi-Hop Composition Note:</strong> Hop 1 (69.58°S) and Hop 2 (70.85°S) were evaluated on authentic flight targets <strong>~38.5 km apart</strong> along the continuous Chandrayaan-2 TMC-2 coverage strip to rigorously validate both intra-sensor and cross-modal regimes. In an operational flight pipeline, multi-hop composition chains these transformations (OHRC → TMC-2 → IIRS) across overlapping spatial footprints to establish global georeferenced coordinates from high-resolution local landings.
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
