@@ -16,9 +16,13 @@ import streamlit as st
 import time
 import json
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+try:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+except Exception:
+    matplotlib = None
+    plt = None
 import io
 import cv2
 import math
@@ -605,18 +609,21 @@ def stage_pill(label: str, status: str = "pending") -> str:
 
 
 def render_image(arr: np.ndarray, title: str = "", cmap: str = "bone"):
-    fig, ax = plt.subplots(figsize=(5, 5), facecolor="#F4F3EE")
-    ax.imshow(arr, cmap=cmap)
-    ax.axis("off")
-    if title:
-        ax.set_title(title, fontsize=9.5, fontweight="bold", pad=8, color="#1E1E24")
-    plt.tight_layout()
+    if plt is not None:
+        fig, ax = plt.subplots(figsize=(5, 5), facecolor="#F4F3EE")
+        ax.imshow(arr, cmap=cmap)
+        ax.axis("off")
+        if title:
+            ax.set_title(title, fontsize=9.5, fontweight="bold", pad=8, color="#1E1E24")
+        plt.tight_layout()
 
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=160, bbox_inches="tight", facecolor="#F4F3EE")
-    plt.close(fig)
-    buf.seek(0)
-    st.image(buf, use_container_width=True)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=160, bbox_inches="tight", facecolor="#F4F3EE")
+        plt.close(fig)
+        buf.seek(0)
+        st.image(buf, use_container_width=True)
+    else:
+        st.image(arr, caption=title, use_container_width=True)
 
 
 # ─── Cache Loaders ───────────────────────────────────────────────────

@@ -419,7 +419,7 @@ git clone https://github.com/bytes06runner/TriNetra.git
 cd TriNetra
 
 # Using Conda (Recommended):
-conda env create -f environment.yml
+conda env create -f environment_conda.yml
 conda activate trinetra
 
 # OR using standard pip:
@@ -474,8 +474,8 @@ Open your browser at `http://localhost:8501`.
 TriNetra/
 ├── .gitignore                           # Git ignore rules (ignoring >100MB weights and raw caches)
 ├── README.md                            # Comprehensive project documentation
-├── environment.yml                      # Conda environment definition
-├── requirements.txt                     # Pinned pip dependencies
+├── environment_conda.yml                # Conda environment definition (local reproduction)
+├── requirements.txt                     # Pinned pip dependencies (Streamlit Cloud deploy)
 ├── app.py                               # Mission-Control Streamlit web application
 │
 ├── assets/                              # Visual assets & real-data flight caches
