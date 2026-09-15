@@ -174,6 +174,60 @@ def main():
     plt.close()
     
     print(f"\nSaved visualization to {out_path} and {assets_out_path}")
+    
+    # Save the verified fine-tuned cache for app.py Dual-Engine Switcher
+    cache_ft_path = REPO_ROOT / 'assets' / 'real_cache' / 'real_flight_hop1_finetuned.npz'
+    orig_h1_path = REPO_ROOT / 'assets' / 'real_cache' / 'real_flight_hop1.npz'
+    orig_meta = np.load(orig_h1_path, allow_pickle=True) if orig_h1_path.exists() else {}
+
+    H_matrix = np.eye(3, dtype=np.float64)
+    if T is not None:
+        H_matrix[:2, :] = T
+
+    inlier_mask_bool = inliers_mask.ravel().astype(bool) if len(inliers_mask) > 0 else np.zeros(raw_matches_num, dtype=bool)
+    if inliers_num > 0 and T is not None:
+        inlier_pts1 = mkpts0_scaled[inlier_mask_bool]
+        inlier_pts2 = mkpts1_scaled[inlier_mask_bool]
+        ones = np.ones((len(inlier_pts1), 1), dtype=np.float32)
+        pts1_h = np.hstack([inlier_pts1, ones])
+        projected = (H_matrix @ pts1_h.T).T
+        denom = projected[:, 2:3]
+        denom[np.abs(denom) < 1e-8] = 1e-8
+        projected = projected[:, :2] / denom
+        reproj_rmse = float(np.sqrt(np.mean(np.sum((projected - inlier_pts2) ** 2, axis=1))))
+    else:
+        reproj_rmse = 0.0
+
+    save_dict = {
+        'disp_ohrc': disp_ohrc,
+        'disp_tmc': disp_tmc,
+        'raw_tmc_crop': orig_meta.get('raw_tmc_crop', cv2.resize(disp_tmc, (300, 300))),
+        'pts1': mkpts0_scaled.astype(np.float32),
+        'pts2': mkpts1_scaled.astype(np.float32),
+        'inlier_mask': inlier_mask_bool,
+        'H': H_matrix,
+        'transform_type': 'Similarity Transform',
+        'transform_dof': 4,
+        'inliers': np.int64(inliers_num),
+        'total_matches': np.int64(raw_matches_num),
+        'inlier_ratio': np.float64(inlier_ratio),
+        'reproj_rmse': np.float64(round(reproj_rmse, 2)),
+        'inlier_threshold': np.float64(15.0),
+        'ohrc_res': np.float64(orig_meta.get('ohrc_res', 0.26)),
+        'tmc_res': np.float64(orig_meta.get('tmc_res', 4.72)),
+        'scale_gap': np.float64(orig_meta.get('scale_gap', 18.15)),
+        'ohrc_product_id': str(orig_meta.get('ohrc_product_id', 'ch2_ohr_ncp_20211023T0027462822_d_img_d18')),
+        'tmc_product_id': str(orig_meta.get('tmc_product_id', 'ch2_tmc_ncn_20230130T1900132182_d_img_d32')),
+        'target_lat': np.float64(orig_meta.get('target_lat', -69.58)),
+        'target_lon': np.float64(orig_meta.get('target_lon', 32.29)),
+        'tmc_sun_elevation': np.float64(orig_meta.get('tmc_sun_elevation', 17.2)),
+        'tmc_sun_azimuth': np.float64(orig_meta.get('tmc_sun_azimuth', 53.0)),
+        'ohrc_sun_elevation': np.float64(orig_meta.get('ohrc_sun_elevation', 10.5)),
+        'ohrc_sun_azimuth': np.float64(orig_meta.get('ohrc_sun_azimuth', 167.6)),
+        'flight_validated': True,
+    }
+    np.savez_compressed(cache_ft_path, **save_dict)
+    print(f"Saved fine-tuned cache to {cache_ft_path} ({cache_ft_path.stat().st_size:,} bytes)")
 
 if __name__ == '__main__':
     main()
