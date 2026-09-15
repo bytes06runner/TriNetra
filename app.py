@@ -189,167 +189,339 @@ st.set_page_config(
 )
 
 
-# ─── CSS: Professional Clean Design ──────────────────────────────────
+# ─── CSS: Aerospace Professional Dashboard ───────────────────────────
 def inject_css():
     st.markdown("""
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
+        /* ── Base ── */
         html, body, [data-testid="stAppViewContainer"] {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: #F9F8F6;
-            color: #2D2D2D;
+            background-color: #0B1120;
+            color: #CBD5E1;
         }
 
         .block-container {
-            padding-top: 1.8rem;
+            padding-top: 1.5rem;
             padding-bottom: 2rem;
-            max-width: 1120px;
+            max-width: 1180px;
         }
 
+        /* ── Typography ── */
         h1 {
-            font-family: 'Newsreader', Georgia, serif !important;
-            font-weight: 600 !important;
-            color: #1a1a2e !important;
-            letter-spacing: -0.02em;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 700 !important;
+            color: #F1F5F9 !important;
+            letter-spacing: -0.03em;
+            font-size: 1.8rem !important;
         }
         h2 {
             font-family: 'Inter', sans-serif !important;
             font-weight: 600 !important;
-            color: #1a1a2e !important;
-            font-size: 1.35rem !important;
+            color: #E2E8F0 !important;
+            font-size: 1.25rem !important;
             letter-spacing: -0.01em;
         }
         h3 {
             font-family: 'Inter', sans-serif !important;
             font-weight: 500 !important;
-            color: #444 !important;
-            font-size: 1.05rem !important;
+            color: #94A3B8 !important;
+            font-size: 1.0rem !important;
+        }
+        h4 {
+            color: #E2E8F0 !important;
+            font-family: 'Inter', sans-serif !important;
+            font-weight: 600 !important;
         }
         p, li, span, div {
             font-family: 'Inter', sans-serif;
-            line-height: 1.6;
+            line-height: 1.65;
         }
 
+        /* ── Sidebar ── */
         [data-testid="stSidebar"] {
-            background-color: #FFFFFF;
-            border-right: 1px solid #E8E5DF;
+            background: linear-gradient(180deg, #0F172A 0%, #1E293B 100%);
+            border-right: 1px solid rgba(100, 116, 139, 0.2);
         }
         [data-testid="stSidebar"] .block-container {
-            padding-top: 1.2rem;
+            padding-top: 1rem;
+        }
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] span,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] div {
+            color: #94A3B8 !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
+            color: #94A3B8 !important;
         }
 
+        /* ── Radio buttons in sidebar ── */
+        [data-testid="stSidebar"] .stRadio label {
+            color: #CBD5E1 !important;
+            transition: color 0.15s ease;
+        }
+        [data-testid="stSidebar"] .stRadio label:hover {
+            color: #38BDF8 !important;
+        }
+
+        /* ── Buttons ── */
         .stButton > button {
-            background-color: #DE7356 !important;
-            color: white !important;
+            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%) !important;
+            color: #F8FAFC !important;
             border: none !important;
-            border-radius: 9px !important;
-            padding: 0.55rem 1.4rem !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 1.3rem !important;
             font-family: 'Inter', sans-serif !important;
-            font-size: 0.90rem !important;
+            font-size: 0.88rem !important;
             font-weight: 600 !important;
             cursor: pointer;
-            transition: all 0.2s ease !important;
-            box-shadow: 0 1px 3px rgba(222, 115, 86, 0.25) !important;
+            transition: all 0.18s ease !important;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25) !important;
         }
         .stButton > button:hover {
-            background-color: #C9604A !important;
-            color: white !important;
-            transform: translateY(-1px) !important;
-            box-shadow: 0 4px 12px rgba(222, 115, 86, 0.3) !important;
+            background: linear-gradient(135deg, #2563EB 0%, #60A5FA 100%) !important;
+            color: #FFFFFF !important;
+            transform: translateY(-1px) scale(1.02) !important;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35) !important;
+        }
+        .stButton > button:active {
+            transform: translateY(0px) scale(0.99) !important;
         }
 
+        /* ── Metric Cards ── */
         .metric-card {
-            background: #FFFFFF;
-            border: 1px solid #E8E5DF;
-            border-radius: 12px;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 10px;
             padding: 1.1rem;
             text-align: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3B82F6, #38BDF8);
+            opacity: 0;
+            transition: opacity 0.18s ease;
         }
         .metric-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+        .metric-card:hover::before {
+            opacity: 1;
         }
         .metric-label {
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #888;
-            margin-bottom: 0.25rem;
+            letter-spacing: 0.1em;
+            color: #64748B;
+            margin-bottom: 0.3rem;
+            font-family: 'Inter', sans-serif;
         }
         .metric-val {
-            font-size: 1.65rem;
+            font-size: 1.55rem;
             font-weight: 700;
-            color: #1a1a2e;
+            color: #F1F5F9;
             line-height: 1.15;
+            font-family: 'JetBrains Mono', monospace;
         }
         .metric-sub {
-            font-size: 0.78rem;
-            color: #777;
-            margin-top: 0.25rem;
+            font-size: 0.74rem;
+            color: #64748B;
+            margin-top: 0.3rem;
+            font-family: 'JetBrains Mono', monospace;
         }
 
+        /* ── Stage Pills ── */
         .stage-pill {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.45rem 0.8rem;
-            border-radius: 8px;
-            font-size: 0.82rem;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
             font-weight: 500;
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.3rem;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .stage-pill:hover {
+            transform: translateX(3px);
         }
         .stage-done {
-            background: #EDF7ED;
-            color: #1E4620;
+            background: rgba(16, 185, 129, 0.12);
+            color: #34D399;
         }
         .stage-active {
-            background: #FDF0ED;
-            color: #DE7356;
+            background: rgba(59, 130, 246, 0.15);
+            color: #60A5FA;
             font-weight: 600;
         }
         .stage-pending {
-            background: #F5F4F0;
-            color: #999;
+            background: rgba(100, 116, 139, 0.1);
+            color: #475569;
         }
 
+        /* ── Status Banners ── */
         .status-banner-success {
-            background-color: #ECFDF5;
-            border-left: 5px solid #10B981;
+            background: rgba(16, 185, 129, 0.08);
+            border-left: 4px solid #10B981;
             padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            font-size: 0.92rem;
-            color: #065F46;
+            border-radius: 6px;
+            margin-bottom: 1.2rem;
+            font-size: 0.9rem;
+            color: #6EE7B7;
             line-height: 1.5;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
         .status-banner-warning {
-            background-color: #FEF3C7;
-            border-left: 5px solid #F59E0B;
+            background: rgba(245, 158, 11, 0.08);
+            border-left: 4px solid #F59E0B;
             padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            font-size: 0.92rem;
-            color: #92400E;
+            border-radius: 6px;
+            margin-bottom: 1.2rem;
+            font-size: 0.9rem;
+            color: #FCD34D;
             line-height: 1.5;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
+        /* ── Presenter Box ── */
         .presenter-box {
-            background: #FFFFFF;
-            border: 1px solid #E2E8F0;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
             border-left: 4px solid #3B82F6;
             border-radius: 8px;
             padding: 14px 18px;
-            margin-top: 1.2rem;
-            font-size: 0.9rem;
-            color: #1E293B;
-            line-height: 1.6;
+            margin-top: 1rem;
+            font-size: 0.88rem;
+            color: #CBD5E1;
+            line-height: 1.65;
+        }
+
+        /* ── Tabs ── */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 0.5rem;
+            background: transparent;
+        }
+        .stTabs [data-baseweb="tab"] {
+            background: rgba(30, 41, 59, 0.6) !important;
+            border-radius: 6px !important;
+            color: #94A3B8 !important;
+            padding: 0.45rem 1rem !important;
+            font-size: 0.82rem !important;
+            font-weight: 500 !important;
+            transition: all 0.15s ease !important;
+            border: 1px solid transparent !important;
+        }
+        .stTabs [data-baseweb="tab"]:hover {
+            background: rgba(30, 41, 59, 0.9) !important;
+            color: #E2E8F0 !important;
+            border-color: rgba(59, 130, 246, 0.3) !important;
+        }
+        .stTabs [aria-selected="true"] {
+            background: rgba(59, 130, 246, 0.15) !important;
+            color: #60A5FA !important;
+            border-color: #3B82F6 !important;
+        }
+        .stTabs [data-baseweb="tab-highlight"] {
+            background-color: #3B82F6 !important;
+        }
+        .stTabs [data-baseweb="tab-border"] {
+            display: none;
+        }
+
+        /* ── Tables (inline HTML tables) ── */
+        table {
+            color: #CBD5E1 !important;
+        }
+        th {
+            background: rgba(30, 41, 59, 0.8) !important;
+            color: #94A3B8 !important;
+            font-weight: 600 !important;
+        }
+        td {
+            color: #CBD5E1 !important;
+            border-color: rgba(100, 116, 139, 0.15) !important;
+        }
+        tr {
+            border-color: rgba(100, 116, 139, 0.15) !important;
+        }
+
+        /* ── Markdown tables ── */
+        [data-testid="stMarkdownContainer"] table {
+            border-collapse: collapse;
+        }
+        [data-testid="stMarkdownContainer"] th {
+            background: rgba(30, 41, 59, 0.8) !important;
+            padding: 8px 12px !important;
+        }
+        [data-testid="stMarkdownContainer"] td {
+            padding: 8px 12px !important;
+        }
+
+        /* ── Expanders ── */
+        .streamlit-expanderHeader {
+            background: rgba(30, 41, 59, 0.5) !important;
+            color: #94A3B8 !important;
+            border-radius: 6px !important;
+            transition: background 0.15s ease !important;
+        }
+        .streamlit-expanderHeader:hover {
+            background: rgba(30, 41, 59, 0.8) !important;
+            color: #E2E8F0 !important;
+        }
+
+        /* ── Inline code ── */
+        code {
+            background: rgba(30, 41, 59, 0.6) !important;
+            color: #38BDF8 !important;
+            padding: 1px 6px !important;
+            border-radius: 4px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 0.85em !important;
+        }
+
+        /* ── Dividers ── */
+        hr {
+            border-color: rgba(100, 116, 139, 0.15) !important;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B1120;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* ── Radio (main area) ── */
+        .stRadio > label {
+            color: #CBD5E1 !important;
+        }
+
+        /* ── Selectbox / Inputs ── */
+        .stSelectbox label,
+        .stTextInput label {
+            color: #94A3B8 !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -392,15 +564,15 @@ def stage_pill(label: str, status: str = "pending") -> str:
 
 
 def render_image(arr: np.ndarray, title: str = "", cmap: str = "bone"):
-    fig, ax = plt.subplots(figsize=(5, 5), facecolor="#F9F8F6")
+    fig, ax = plt.subplots(figsize=(5, 5), facecolor="#0B1120")
     ax.imshow(arr, cmap=cmap)
     ax.axis("off")
     if title:
-        ax.set_title(title, fontsize=9.5, fontweight="bold", pad=8, color="#2D2D2D")
+        ax.set_title(title, fontsize=9.5, fontweight="bold", pad=8, color="#E2E8F0")
     plt.tight_layout()
 
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=160, bbox_inches="tight", facecolor="#F9F8F6")
+    fig.savefig(buf, format="png", dpi=160, bbox_inches="tight", facecolor="#0B1120")
     plt.close(fig)
     buf.seek(0)
     st.image(buf, use_container_width=True)
@@ -672,8 +844,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("""
     <div style="text-align:center; padding-top: 0.2rem;">
-        <p style="font-size:0.7rem; color:#aaa; line-height: 1.4;">
-            <strong>ISRO · SIH26166</strong><br/>
+        <p style="font-size:0.7rem; color:#64748B; line-height: 1.4;">
+            <strong style="color:#94A3B8;">ISRO · SIH26166</strong><br/>
             Chandrayaan-2 Lunar Correspondence<br/>
             OHRC (0.26m) ↔ TMC-2 (5m) ↔ IIRS (92m)
         </p>
@@ -782,7 +954,7 @@ if st.session_state.active_scene == "hop1":
         if is_flight_mode:
             st.markdown("<h3>Stage 1: Multi-Scale Flight Crop & Spatial Resolution Normalization</h3>", unsafe_allow_html=True)
             st.markdown("""
-            <p style="color:#555; font-size:0.9rem;">
+            <p style="color:#94A3B8; font-size:0.9rem;">
                 The left image shows the 1000×1000 sub-window from the raw 93K × 12K <strong>OHRC flight image (0.26 m/px)</strong>.
                 The right image shows the corresponding crater field extracted from the raw 190K × 4K <strong>TMC-2 flight image (4.72 m/px)</strong> at line 132,700, sample 710.
             </p>
@@ -800,7 +972,7 @@ if st.session_state.active_scene == "hop1":
         else:
             st.markdown("<h3>Stage 1: Multi-Scale Flight Crop & 20× Optical Downsampling</h3>", unsafe_allow_html=True)
             st.markdown("""
-            <p style="color:#555; font-size:0.9rem;">
+            <p style="color:#94A3B8; font-size:0.9rem;">
                 The left image shows a 1000×1000 sub-window extracted from the raw 93K × 12K OHRC flight image (0.26 m/px).
                 The right image is the 20× anti-aliased optical downsampling (5.20 m/px), emulating the spatial integration of TMC-2's linear detector.
             </p>
@@ -822,7 +994,7 @@ if st.session_state.active_scene == "hop1":
     elif step == 2:
         st.markdown("<h3>Stage 2: Scale-Aligned Keypoint Correspondence</h3>", unsafe_allow_html=True)
         st.markdown("""
-        <p style="color:#555; font-size:0.9rem;">
+        <p style="color:#94A3B8; font-size:0.9rem;">
             Horizontal green correspondence vectors connecting matching crater rims across the optical scale difference.
             Notice how prominent crater rim geometries remain invariant under scale transitions.
         </p>
@@ -856,7 +1028,7 @@ if st.session_state.active_scene == "hop1":
             cv2.circle(vis_rgb, p1, 4, (255, 120, 0), -1)
             cv2.circle(vis_rgb, p2, 4, (0, 200, 255), -1)
 
-        fig, ax = plt.subplots(figsize=(10, 5), facecolor="#F9F8F6")
+        fig, ax = plt.subplots(figsize=(10, 5), facecolor="#0B1120")
         ax.imshow(vis_rgb)
         ax.axis("off")
         lbl_pair = "Real OHRC (0.26 m/px) ↔ Real TMC-2 (4.72 m/px)" if is_flight_mode else "Real OHRC (0.26 m/px) ↔ Simulated TMC-2 Sampling (5.20 m/px)"
@@ -864,7 +1036,7 @@ if st.session_state.active_scene == "hop1":
         plt.tight_layout()
 
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=180, bbox_inches="tight", facecolor="#F9F8F6")
+        fig.savefig(buf, format="png", dpi=180, bbox_inches="tight", facecolor="#0B1120")
         plt.close(fig)
         buf.seek(0)
         st.image(buf, use_container_width=True)
@@ -913,7 +1085,7 @@ if st.session_state.active_scene == "hop1":
         baseline_data = load_zeroshot_results()
         ft_data = load_finetune_results()
         zs_hop1_sift = next((e for e in baseline_data if "SIFT" in e.get("matcher", "") and "Hop 1" in e.get("hop", "")), None)
-        zs_hop1_sift_ratio = float(zs_hop1_sift.get("inlier_ratio_pct", active_data["inlier_ratio"])) if zs_hop1_sift else float(active_data["inlier_ratio"])
+        zs_hop1_sift_ratio = float(zs_hop1_sift.get("unfiltered_ratio_pct") or zs_hop1_sift.get("inlier_ratio_pct") or active_data["inlier_ratio"]) if zs_hop1_sift else float(active_data["inlier_ratio"])
         zs_hop1_sift_inl = int(zs_hop1_sift.get("inliers", active_data["inliers"])) if zs_hop1_sift else int(active_data["inliers"])
         
         ft_best = ft_data.get("best_result", {})
@@ -941,9 +1113,9 @@ if st.session_state.active_scene == "hop1":
                 """, unsafe_allow_html=True)
 
                 st.markdown(f"""
-                <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                    <h4 style="margin-top:0; color:#1a1a2e;">Why Inlier Gating Demonstrates Scientific Maturity (Hop 1: OHRC ↔ TMC-2):</h4>
-                    <ul style="color:#555; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
+                <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                    <h4 style="margin-top:0; color:#E2E8F0;">Why Inlier Gating Demonstrates Scientific Maturity (Hop 1: OHRC ↔ TMC-2):</h4>
+                    <ul style="color:#94A3B8; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
                         <li><strong>Inlier Ratio Gate:</strong> {active_data['inliers']} inliers out of {active_data['total_matches']} candidate matches ({active_data['inlier_ratio']:.1f}%) represents a matching failure driven by the 18.15× resolution gap and 114.6° solar illumination disparity.</li>
                         <li><strong>Threshold Widened:</strong> MAGSAC++ threshold was widened to {thresh_px:.1f} px ({thresh_m:.1f} m ground error) from the initial value of 5.0 px (23.6 m) to admit any consensus at all. Even at this tolerance the inlier ratio remains below the reliability gate.</li>
                         <li><strong>Candidate Ground Error:</strong> A 4-DoF {active_data.get('transform_type', 'Similarity Transform')} fitted to {active_data['inliers']} inliers yields a candidate reprojection residual of {rmse_px:.2f} px ({rmse_m:.1f} m ground error at {target_gsd:.2f} m/px) against the {thresh_px:.1f} px ({thresh_m:.1f} m) threshold. With only {active_data['inliers']} points, the transformation remains mathematically unvalidated.</li>
@@ -971,7 +1143,7 @@ if st.session_state.active_scene == "hop1":
                 """, unsafe_allow_html=True)
 
                 st.markdown("""
-                <p style="color:#555; font-size:0.9rem;">
+                <p style="color:#94A3B8; font-size:0.9rem;">
                     In the false-color composite: <strong>Red = Warped OHRC</strong>, <strong>Cyan = Target TMC-2</strong>.
                     Regions of geometric alignment appear in neutral grayscale/white.
                 </p>
@@ -1050,26 +1222,26 @@ if st.session_state.active_scene == "hop1":
                             badge_html = '<span style="background:#FEFCBF; color:#744210; padding:2px 8px; border-radius:4px; font-weight:600;">⚠️ Unreliable (&lt;20 inliers)</span>'
 
                         rows_html += f"""
-                            <tr style="border-bottom:1px solid #EEE;">
+                            <tr style="border-bottom:1px solid rgba(100,116,139,0.15);">
                                 <td style="padding:8px 12px; font-weight:600;">{hop_name}: {matcher_name}</td>
                                 <td style="padding:8px 12px;">{inl} / {raw}</td>
                                 <td style="padding:8px 12px; font-weight:600;">{ratio_str}</td>
                                 <td style="padding:8px 12px;">{px_str}</td>
                                 <td style="padding:8px 12px;">{m_str}</td>
-                                <td style="padding:8px 12px; font-size:0.8rem; color:#666;">{runtime:.2f}s ({dev})</td>
+                                <td style="padding:8px 12px; font-size:0.8rem; color:#64748B;">{runtime:.2f}s ({dev})</td>
                                 <td style="padding:8px 12px;">{badge_html}</td>
                             </tr>
                         """
 
                     st.markdown(f"""
-                    <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                        <h4 style="margin-top:0; color:#1a1a2e;">📊 Measured Zero-Shot Baseline Scorecard</h4>
-                        <p style="color:#555; font-size:0.9rem; line-height:1.6;">
+                    <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                        <h4 style="margin-top:0; color:#E2E8F0;">📊 Measured Zero-Shot Baseline Scorecard</h4>
+                        <p style="color:#94A3B8; font-size:0.9rem; line-height:1.6;">
                             Empirical zero-shot baselines measured directly on authentic Chandrayaan-2 flight crops across 4 state-of-the-art matchers.
                         </p>
                         <table style="width:100%; border-collapse:collapse; font-size:0.88rem; text-align:left;">
                             <thead>
-                                <tr style="background:#F7F6F2; border-bottom:2px solid #DDD;">
+                                <tr style="background:#0F172A; border-bottom:2px solid rgba(100,116,139,0.3);">
                                     <th style="padding:8px 12px;">Configuration</th>
                                     <th style="padding:8px 12px;">Matches (Inl/Raw)</th>
                                     <th style="padding:8px 12px;">Inlier Ratio</th>
@@ -1093,9 +1265,9 @@ if st.session_state.active_scene == "hop1":
                     """, unsafe_allow_html=True)
                 else:
                     st.markdown("""
-                    <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                        <h4 style="margin-top:0; color:#1a1a2e;">📊 Measured Baseline Scorecard</h4>
-                        <p style="color:#555; font-size:0.9rem; line-height:1.6;">
+                    <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                        <h4 style="margin-top:0; color:#E2E8F0;">📊 Measured Baseline Scorecard</h4>
+                        <p style="color:#94A3B8; font-size:0.9rem; line-height:1.6;">
                             Zero-shot baselines pending — execute <code>python scripts/baseline_zeroshot.py</code> to populate.
                         </p>
                     </div>
@@ -1155,9 +1327,9 @@ if st.session_state.active_scene == "hop1":
                     st.markdown(metric_card("Fine-Tuned EfficientLoFTR", f"{ft_ratio:.1f}% Ratio", f"{ft_inliers} inliers ({ft_inliers}/{ft_raw}, seed {ft_seed}), ✅ CLEARED"), unsafe_allow_html=True)
 
                 st.markdown("""
-                <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                    <h4 style="margin-top:0; color:#1a1a2e;">Training Details</h4>
-                    <ul style="color:#555; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
+                <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                    <h4 style="margin-top:0; color:#E2E8F0;">Training Details</h4>
+                    <ul style="color:#94A3B8; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
                         <li><strong>Init weights:</strong> MatchAnything-ELoFTR (outdoor pretrained)</li>
                         <li><strong>Training data:</strong> 15,000 synthetic pairs from LOLA 5m DEM, lunar south pole</li>
                         <li><strong>Input resolution:</strong> 256×256 with RoPE NPE=[256,256,256,256]</li>
@@ -1225,7 +1397,7 @@ if st.session_state.active_scene == "hop1":
 
         else:
             st.markdown("""
-            <p style="color:#555; font-size:0.9rem;">
+            <p style="color:#94A3B8; font-size:0.9rem;">
                 The computed transformation matrix maps OHRC coordinates into the TMC-2 sampling frame.
                 In the false-color composite: <strong>Red = Warped OHRC</strong>, <strong>Cyan = Target TMC-2</strong>.
                 Regions of geometric alignment appear in neutral grayscale/white.
@@ -1350,7 +1522,7 @@ elif st.session_state.active_scene == "hop2":
         if step2 == 1:
             st.markdown("<h3>Stage 1: Multi-Scale Flight Crop & SWIR Band Integration</h3>", unsafe_allow_html=True)
             st.markdown("""
-            <p style="color:#555; font-size:0.9rem;">
+            <p style="color:#94A3B8; font-size:0.9rem;">
                 The left image shows the 1738×1738 sub-window from the calibrated <strong>TMC-2 flight image (4.72 m/px)</strong>.
                 The right image shows the corresponding crater terrain from the raw <strong>IIRS flight cube (68.38 m/px)</strong>, constructed by multi-band integration across the 1000–1600 nm NIR window with pushbroom destriping.
             </p>
@@ -1362,7 +1534,7 @@ elif st.session_state.active_scene == "hop2":
                 render_image(flight_h2["disp_iirs"], "Real IIRS Flight Proxy (68.38 m/px — Raw SWIR)")
 
             st.markdown("""
-            <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1rem; margin-top:0.8rem; font-size:0.85rem; color:#444;">
+            <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1rem; margin-top:0.8rem; font-size:0.85rem; color:#94A3B8;">
                 <strong>🔍 Sensor Array Ingestion & Resolution Diagnostics:</strong>
                 <ul style="margin: 0.4rem 0 0 1rem; padding: 0; line-height: 1.6;">
                     <li><strong>TMC-2 Array:</strong> Extracted from <code>ch2_tmc_ncn_20230130T1900132182_d_img_d32.img</code> (shape <code>189,886 × 4,000</code>, <code>uint16 / &lt;u2</code>). Sub-window: lines <code>150,000:151,738</code>, samples <code>1,000:2,738</code> (native <code>1738 × 1738</code> pixels @ 4.72 m/px, min: 38 DN, max: 247 DN). Resolves fine impact crater structures down to ~15 m diameter.</li>
@@ -1389,7 +1561,7 @@ elif st.session_state.active_scene == "hop2":
         elif step2 == 2:
             st.markdown("<h3>Stage 2: Cross-Modal Keypoint Correspondence</h3>", unsafe_allow_html=True)
             st.markdown("""
-            <p style="color:#555; font-size:0.9rem;">
+            <p style="color:#94A3B8; font-size:0.9rem;">
                 Horizontal green correspondence vectors connecting matching crater rim features across the 14.49× optical scale difference and 135.8° illumination disparity.
             </p>
             """, unsafe_allow_html=True)
@@ -1414,14 +1586,14 @@ elif st.session_state.active_scene == "hop2":
                 cv2.circle(vis_rgb, p1, 4, (255, 120, 0), -1)
                 cv2.circle(vis_rgb, p2, 4, (0, 200, 255), -1)
 
-            fig, ax = plt.subplots(figsize=(10, 5), facecolor="#F9F8F6")
+            fig, ax = plt.subplots(figsize=(10, 5), facecolor="#0B1120")
             ax.imshow(vis_rgb)
             ax.axis("off")
             ax.set_title(f"Real TMC-2 (4.72 m/px) ↔ Real IIRS (68.38 m/px) — {flight_h2['inliers']} Inliers", fontsize=10, fontweight="bold", pad=8)
             plt.tight_layout()
 
             buf = io.BytesIO()
-            fig.savefig(buf, format="png", dpi=180, bbox_inches="tight", facecolor="#F9F8F6")
+            fig.savefig(buf, format="png", dpi=180, bbox_inches="tight", facecolor="#0B1120")
             plt.close(fig)
             buf.seek(0)
             st.image(buf, use_container_width=True)
@@ -1508,9 +1680,9 @@ elif st.session_state.active_scene == "hop2":
                     """, unsafe_allow_html=True)
 
                     st.markdown(f"""
-                    <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                        <h4 style="margin-top:0; color:#1a1a2e;">Why Inlier Gating Demonstrates Scientific Maturity (Hop 2: TMC-2 ↔ IIRS):</h4>
-                        <ul style="color:#555; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
+                    <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                        <h4 style="margin-top:0; color:#E2E8F0;">Why Inlier Gating Demonstrates Scientific Maturity (Hop 2: TMC-2 ↔ IIRS):</h4>
+                        <ul style="color:#94A3B8; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
                             <li><strong>Inlier Ratio Gate:</strong> At {flight_h2['inlier_ratio']:.1f}% inlier consensus ({flight_h2['inliers']} inliers from {flight_h2['total_matches']} candidate correspondences), the candidate set is dominated by cross-modal noise and extreme illumination disparities (135.8° azimuth offset).</li>
                             <li><strong>Threshold Widened:</strong> MAGSAC++ threshold was widened to {thresh_px:.1f} px ({thresh_m:.1f} m ground error) from the initial value of 8.0 px (547.0 m) to admit any consensus at all. Even at this tolerance the inlier ratio remains below the reliability gate.</li>
                             <li><strong>Threshold Constraint Ratio:</strong> Candidate reprojection error is {rmse_val:.2f} px ({rmse_m:.1f} m ground error) against a {thresh_px:.1f} px ({thresh_m:.1f} m) threshold ({ratio_of_thresh:.1f}% of threshold). Because the RMSE is a substantial fraction of the inlier threshold, the solution is only marginally constrained by the threshold filter itself.</li>
@@ -1539,7 +1711,7 @@ elif st.session_state.active_scene == "hop2":
                     """, unsafe_allow_html=True)
 
                     st.markdown("""
-                    <p style="color:#555; font-size:0.9rem;">
+                    <p style="color:#94A3B8; font-size:0.9rem;">
                         In the false-color composite: <strong>Red = Warped TMC-2</strong>, <strong>Cyan = Target IIRS</strong>.
                         Regions of geometric alignment appear in neutral grayscale/white.
                     </p>
@@ -1606,26 +1778,26 @@ elif st.session_state.active_scene == "hop2":
                                 badge_html = '<span style="background:#FEFCBF; color:#744210; padding:2px 8px; border-radius:4px; font-weight:600;">⚠️ Unreliable (&lt;20 inliers)</span>'
 
                             rows_html2 += f"""
-                                <tr style="border-bottom:1px solid #EEE;">
+                                <tr style="border-bottom:1px solid rgba(100,116,139,0.15);">
                                     <td style="padding:8px 12px; font-weight:600;">Hop 2: {matcher_name}</td>
                                     <td style="padding:8px 12px;">{inl} / {raw}</td>
                                     <td style="padding:8px 12px; font-weight:600;">{ratio_str}</td>
                                     <td style="padding:8px 12px;">{px_str}</td>
                                     <td style="padding:8px 12px;">{m_str}</td>
-                                    <td style="padding:8px 12px; font-size:0.8rem; color:#666;">{runtime:.2f}s ({dev})</td>
+                                    <td style="padding:8px 12px; font-size:0.8rem; color:#64748B;">{runtime:.2f}s ({dev})</td>
                                     <td style="padding:8px 12px;">{badge_html}</td>
                                 </tr>
                             """
 
                         st.markdown(f"""
-                        <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                            <h4 style="margin-top:0; color:#1a1a2e;">📊 Hop 2 Zero-Shot Baseline Scorecard</h4>
-                            <p style="color:#555; font-size:0.9rem; line-height:1.6;">
+                        <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                            <h4 style="margin-top:0; color:#E2E8F0;">📊 Hop 2 Zero-Shot Baseline Scorecard</h4>
+                            <p style="color:#94A3B8; font-size:0.9rem; line-height:1.6;">
                                 Direct evaluation of 4 off-the-shelf terrestrial matchers on authentic TMC-2 (4.72 m/px) ↔ IIRS (68.38 m/px) cross-modal flight data.
                             </p>
                             <table style="width:100%; border-collapse:collapse; font-size:0.88rem; text-align:left;">
                                 <thead>
-                                    <tr style="background:#F7F6F2; border-bottom:2px solid #DDD;">
+                                    <tr style="background:#0F172A; border-bottom:2px solid rgba(100,116,139,0.3);">
                                         <th style="padding:8px 12px;">Configuration</th>
                                         <th style="padding:8px 12px;">Matches (Inl/Raw)</th>
                                         <th style="padding:8px 12px;">Inlier Ratio</th>
@@ -1671,9 +1843,9 @@ elif st.session_state.active_scene == "hop2":
 
                     # Empirical Scorecard Table
                     st.markdown("""
-                    <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin:1.5rem 0;">
-                        <h4 style="margin-top:0; color:#1a1a2e;">📊 Hop 2 Empirical Progression Scorecard (10 Independent Configurations)</h4>
-                        <p style="color:#555; font-size:0.9rem; line-height:1.6;">
+                    <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin:1.5rem 0;">
+                        <h4 style="margin-top:0; color:#E2E8F0;">📊 Hop 2 Empirical Progression Scorecard (10 Independent Configurations)</h4>
+                        <p style="color:#94A3B8; font-size:0.9rem; line-height:1.6;">
                             Rigorous evaluation across algorithmic avenues on authentic Chandrayaan-2 South Pole flight data (seed=42).
                         </p>
                     """, unsafe_allow_html=True)
@@ -1686,7 +1858,7 @@ elif st.session_state.active_scene == "hop2":
                             preproc = att.get("preprocessing", "")
                             raw_m = att.get("raw_matches", 0)
                             inl_m = att.get("inliers", 0)
-                            rat_m = att.get("inlier_ratio_pct", 0.0)
+                            rat_m = att.get("inlier_ratio_pct") or att.get("unfiltered_ratio_pct") or 0.0
                             err_px = att.get("rmse_px")
                             err_m = att.get("rmse_m")
                             status_m = att.get("status", "GATED")
@@ -1702,14 +1874,14 @@ elif st.session_state.active_scene == "hop2":
                             err_str = f"{err_px:.2f} px ({err_m:.1f} m)" if (err_px is not None and "DEGENERATE" not in status_m) else "—"
 
                             rows_h2_all += f"""
-                                <tr style="border-bottom:1px solid #EEE;">
+                                <tr style="border-bottom:1px solid rgba(100,116,139,0.15);">
                                     <td style="padding:8px 12px; font-family:monospace; font-size:0.8rem;">{att_id}</td>
                                     <td style="padding:8px 12px; font-weight:600;">{matcher}</td>
-                                    <td style="padding:8px 12px; font-size:0.82rem; color:#555;">{preproc}</td>
+                                    <td style="padding:8px 12px; font-size:0.82rem; color:#94A3B8;">{preproc}</td>
                                     <td style="padding:8px 12px;">{inl_m} / {raw_m}</td>
                                     <td style="padding:8px 12px; font-weight:600;">{rat_m:.1f}%</td>
                                     <td style="padding:8px 12px;">{err_str}</td>
-                                    <td style="padding:8px 12px; font-size:0.8rem; color:#666;">{time_s:.2f}s</td>
+                                    <td style="padding:8px 12px; font-size:0.8rem; color:#64748B;">{time_s:.2f}s</td>
                                     <td style="padding:8px 12px;">{badge_html}</td>
                                 </tr>
                             """
@@ -1717,7 +1889,7 @@ elif st.session_state.active_scene == "hop2":
                         st.markdown(f"""
                         <table style="width:100%; border-collapse:collapse; font-size:0.86rem; text-align:left;">
                             <thead>
-                                <tr style="background:#F7F6F2; border-bottom:2px solid #DDD;">
+                                <tr style="background:#0F172A; border-bottom:2px solid rgba(100,116,139,0.3);">
                                     <th style="padding:8px 12px;">Attempt</th>
                                     <th style="padding:8px 12px;">Matcher</th>
                                     <th style="padding:8px 12px;">Preprocessing</th>
@@ -1737,9 +1909,9 @@ elif st.session_state.active_scene == "hop2":
 
                     # Technical Methodology Box
                     st.markdown("""
-                    <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                        <h4 style="margin-top:0; color:#1a1a2e;">Engineering &amp; Physics Breakdown: How Hop 2 Was Cleared</h4>
-                        <ul style="color:#555; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
+                    <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                        <h4 style="margin-top:0; color:#E2E8F0;">Engineering &amp; Physics Breakdown: How Hop 2 Was Cleared</h4>
+                        <ul style="color:#94A3B8; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
                             <li><strong>1b. Peter Kovesi's Log-Gabor Phase Congruency:</strong> By projecting both sensors through a 4-scale, 6-orientation 2D Log-Gabor filter bank, we compute the maximum moment of phase congruency ($M_{\\max}$). Phase congruency evaluates where Fourier frequency components are in phase, creating a structural map that is mathematically invariant to non-linear radiometric differences, brightness scaling, and spectral contrast inversions. Coupled with fine-tuned LoFTR, it achieves <strong>124 inliers (40.4% ratio)</strong>.</li>
                             <li><strong>1c. Optimized 1500 nm Channel Selection:</strong> Ingesting the full 256-band IIRS datacube and computing correlation against TMC-2 identified Band 48 (1504.4 nm) as the optimal proxy channel ($r = -0.0467$), achieving <strong>45 inliers (22.2% ratio)</strong>.</li>
                             <li><strong>Design-Level Multi-Hop Composition Target:</strong> Hop 1's anchor (Lat −69.58°S) and Hop 2's anchor (Lat −70.85°S) are different sites ~38 km apart on the same continuous TMC-2 strip. The composed transform $H_{\\text{OHRC} \\to \\text{IIRS}} = H_{\\text{TMC-2} \\to \\text{IIRS}} \\cdot H_{\\text{OHRC} \\to \\text{TMC-2}}$ is a design-level composition of two independently-validated transforms at different locations along the continuous TMC-2 track, not a single validated three-instrument chain at one site.</li>
@@ -1749,9 +1921,9 @@ elif st.session_state.active_scene == "hop2":
 
                     # Verbatim Sub-Pixel Limitation Callout
                     st.markdown("""
-                    <div style="background:#FFF8E7; border:1px solid #FFE0B2; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                        <h4 style="margin-top:0; color:#B45309;">⚠️ Physical Resolution &amp; Sub-Pixel Constraint</h4>
-                        <p style="color:#78350F; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
+                    <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                        <h4 style="margin-top:0; color:#FBBF24;">⚠️ Physical Resolution &amp; Sub-Pixel Constraint</h4>
+                        <p style="color:#FCD34D; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
                             Phase congruency filters out monotonic photometric inversion and extracts frequency-phase edges and ridges. However, IIRS is natively 120×120 pixels (68.38 m/px GSD). Sub-kilometer craters clearly visible in TMC-2 (4.72 m/px) are simply not resolved in IIRS. Therefore, Attempt 1b is not matching micro-craters; it is genuinely and accurately matching macroscopic crater rims (&gt;1.5 km diameter), mountain ridges, and primary topographic fault lines across the visible/SWIR divide. Given the PS explicitly asks for sub-pixel accuracy and our RMSE here is 618.5 m (9.05 px at 68.38 m/px GSD), achieving true sub-pixel registration on unresolved terrain remains an open physical limitation.
                         </p>
                     </div>
@@ -1778,7 +1950,7 @@ elif st.session_state.active_scene == "hop2":
                     """, unsafe_allow_html=True)
             else:
                 st.markdown("""
-                <p style="color:#555; font-size:0.9rem;">
+                <p style="color:#94A3B8; font-size:0.9rem;">
                     The estimated transformation matrix maps TMC-2 coordinates into the IIRS sampling frame.
                     In the false-color composite: <strong>Red = Warped TMC-2</strong>, <strong>Cyan = Target IIRS</strong>.
                 </p>
@@ -1882,7 +2054,7 @@ elif st.session_state.active_scene == "hop2":
         if step2 == 1:
             st.markdown("<h3>Stage 1: Selenographic Footprint Ingestion & Alignment</h3>", unsafe_allow_html=True)
             st.markdown("""
-            <p style="color:#555; font-size:0.9rem;">
+            <p style="color:#94A3B8; font-size:0.9rem;">
                 Confirmed geographic overlap pair from the Lunar North Pole (89.7086°N, 5.0764°E).
                 Loaded via zero-copy memory mapping without heap memory overhead.
             </p>
@@ -1911,7 +2083,7 @@ elif st.session_state.active_scene == "hop2":
         elif step2 == 2:
             st.markdown("<h3>Stage 2: Pushbroom Destriping & IIRS Proxy Variants</h3>", unsafe_allow_html=True)
             st.markdown("""
-            <p style="color:#555; font-size:0.9rem;">
+            <p style="color:#94A3B8; font-size:0.9rem;">
                 Raw pushbroom spectrometers exhibit severe column-to-column gain non-uniformity and defective detector pixels (white vertical stripes).
                 We engineered an autonomous pushbroom calibration filter with bad-detector column detection (>2.5 MAD) and adjacent-column linear interpolation, followed by cross-track column median destriping (α = 0.85). This eliminates saturated detector columns (e.g. sample 210) and reduces stripe variance by 91.7% (column std: 0.370 → 0.031) while preserving genuine lunar terrain topography.
             </p>
@@ -1975,9 +2147,9 @@ elif st.session_state.active_scene == "hop2":
             """, unsafe_allow_html=True)
 
             st.markdown("""
-            <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                <h4 style="margin-top:0; color:#1a1a2e;">Why Gating Demonstrates Engineering Maturity:</h4>
-                <ul style="color:#555; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
+            <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                <h4 style="margin-top:0; color:#E2E8F0;">Why Gating Demonstrates Engineering Maturity:</h4>
+                <ul style="color:#94A3B8; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
                     <li><strong>Empirically Verified Noise Floor:</strong> Radiance in the 89.7°N crop is 60× lower than equatorial/temperate segments of the same flight strip (7.5 DN vs 458.9 DN at 1500 nm), collapsing SNR to 1.40. In noise-dominated regolith, feature extractors produce false pseudo-correspondences.</li>
                     <li><strong>Operational Integrity:</strong> In autonomous planetary exploration systems, knowing <em>when not to register</em> prevents catastrophic navigation divergence.</li>
                     <li><strong>Multi-Proxy Validation:</strong> All four independent reduction methods (sub-2000nm mean, 1500 nm channel, 3-band composite, and PC1) yield |r| &le; 0.027 against downsampled TMC-2, proving absence of extractable crater topography in this crop.</li>
@@ -2018,15 +2190,15 @@ elif st.session_state.active_scene == "overview":
 
     # Mathematical Formula Box (Design Target)
     st.markdown("""
-    <div style="background:white; border:1px solid #E8E5DF; border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; text-align:center;">
-        <h3 style="margin-top:0; color:#1a1a2e;">Mathematical Design Target: Multi-Hop Transformation Composition</h3>
-        <p style="font-size: 1.15rem; color:#DE7356; font-family: monospace; font-weight: 700; margin: 0.8rem 0;">
+    <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; text-align:center;">
+        <h3 style="margin-top:0; color:#E2E8F0;">Mathematical Design Target: Multi-Hop Transformation Composition</h3>
+        <p style="font-size: 1.15rem; color:#60A5FA; font-family: monospace; font-weight: 700; margin: 0.8rem 0;">
             T(OHRC → IIRS) = T(TMC-2 → IIRS) · T(OHRC → TMC-2)
         </p>
-        <p style="color:#B45309; background:#FEF3C7; border: 1px solid #FDE68A; border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0.6rem auto; text-align:left; line-height:1.55;">
+        <p style="color:#FBBF24; background:rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25); border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0.6rem auto; text-align:left; line-height:1.55;">
             <strong>ℹ️ Design-Level Multi-Hop Composition:</strong> Hop 1's anchor (Lat −69.58°S) and Hop 2's anchor (Lat −70.85°S) are different sites <strong>~38.5 km apart</strong> (1.27° latitude on the 1,737.4 km lunar sphere) along the same continuous TMC-2 strip. The composed transform <code>T(OHRC → IIRS) = T(TMC-2 → IIRS) · T(OHRC → TMC-2)</code> is therefore a design-level composition of two independently-validated transforms at different locations along the orbit corridor, not a single validated three-instrument chain at one site (matching Section 3 of the technical document).
         </p>
-        <p style="color:#065F46; background:#ECFDF5; border: 1px solid #A7F3D0; border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0 auto; text-align:left; line-height:1.55;">
+        <p style="color:#6EE7B7; background:rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0 auto; text-align:left; line-height:1.55;">
             <strong>🚀 Dual-Gate Scientific Integrity:</strong> Both Hop 1 (OHRC ↔ TMC-2, 18.15×) and Hop 2 (TMC-2 ↔ IIRS, 14.49×) use 4-DoF Similarity Transforms (scale, rotation, translation) suited to orbital pushbroom cameras. Autonomous inlier ratio gating (&lt;15% ratio or &lt;20 inliers) prevents misleading overlays on low-consensus flight pairs, while the North Polar SNR gate (SNR ≈ 1.4) rejects noise-dominated regolith.
         </p>
     </div>
@@ -2044,7 +2216,7 @@ elif st.session_state.active_scene == "overview":
 
     ov_sift_h1 = next((e for e in ov_baseline if "SIFT" in e.get("matcher", "") and "Hop 1" in e.get("hop", "")), {})
     ov_sift_h1_inl = int(ov_sift_h1.get("inliers", 5))
-    ov_sift_h1_ratio = float(ov_sift_h1.get("inlier_ratio_pct", 1.2))
+    ov_sift_h1_ratio = float(ov_sift_h1.get("unfiltered_ratio_pct") or ov_sift_h1.get("inlier_ratio_pct") or 1.2)
 
     ov_pc_att = next((a for a in ov_h2 if a.get("attempt_id") == "1b_finetuned_phase_congruency"), {})
     ov_h2_pc_inl = int(ov_pc_att.get("inliers", 124))
@@ -2053,43 +2225,43 @@ elif st.session_state.active_scene == "overview":
     # 6 Pillars of TriNetra Architecture
     st.markdown(f"""
     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.2rem; margin-bottom: 1.5rem;">
-        <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
-            <h4 style="color:#1a1a2e; margin-top:0;">1. Scale Invariance & Inlier Gating</h4>
-            <p style="color:#555; font-size:0.88rem; line-height:1.6;">
+        <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem;">
+            <h4 style="color:#E2E8F0; margin-top:0;">1. Scale Invariance & Inlier Gating</h4>
+            <p style="color:#94A3B8; font-size:0.88rem; line-height:1.6;">
                 Evaluated on authentic OHRC (0.26 m/px) and TMC-2 (4.72 m/px) flight data. Classical SIFT yields {ov_sift_h1_ratio:.1f}% inlier ratio ({ov_sift_h1_inl} inliers, gated).
                 Domain-adapted EfficientLoFTR achieves {ov_ft_ratio:.1f}% inlier ratio ({ov_ft_inl} inliers, seed {ov_ft_seed}), clearing the spaceflight gate.
                 Controlled 20× single-sensor optical benchmark confirms 96.2% consensus.
             </p>
         </div>
-        <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
-            <h4 style="color:#1a1a2e; margin-top:0;">2. Cross-Modal Gating & Noise Floor Baseline</h4>
-            <p style="color:#555; font-size:0.88rem; line-height:1.6;">
+        <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem;">
+            <h4 style="color:#E2E8F0; margin-top:0;">2. Cross-Modal Gating & Noise Floor Baseline</h4>
+            <p style="color:#94A3B8; font-size:0.88rem; line-height:1.6;">
                 Evaluated on co-located South Pole TMC-2 (4.72 m/px) and raw IIRS (68.38 m/px) flight products (1000–1600 nm proxy, 109.6 raw DN counts, 4-DoF Similarity Transform). Scientifically gated below reliability threshold (RMSE 8.92 px = 610.0 m ground error against 20.0 px threshold), paired with North Polar (89.7°N) SNR gating (SWIR SNR ≈ 1.4).
             </p>
         </div>
-        <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
-            <h4 style="color:#1a1a2e; margin-top:0;">3. Authentic LOLA DEM Elevation Ingestion</h4>
-            <p style="color:#555; font-size:0.88rem; line-height:1.6;">
+        <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem;">
+            <h4 style="color:#E2E8F0; margin-top:0;">3. Authentic LOLA DEM Elevation Ingestion</h4>
+            <p style="color:#94A3B8; font-size:0.88rem; line-height:1.6;">
                 Ingested NASA LOLA GDR 240 m/px elevation model covering 69°–71°S, 31°–34°E (Shiv Shakti Point) with 2,160 m terrain relief. Serves as ground truth 3D terrain foundation for ray-casting orthorectification.
             </p>
         </div>
-        <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
-            <h4 style="color:#1a1a2e; margin-top:0;">4. Deep Learned Feature Matching Baselines</h4>
-            <p style="color:#555; font-size:0.88rem; line-height:1.6;">
+        <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem;">
+            <h4 style="color:#E2E8F0; margin-top:0;">4. Deep Learned Feature Matching Baselines</h4>
+            <p style="color:#94A3B8; font-size:0.88rem; line-height:1.6;">
                 Evaluated 4 state-of-the-art matchers (SIFT, LightGlue, EfficientLoFTR, MatchAnything) on authentic flight crops.
                 All 12 zero-shot configurations failed the spaceflight gate.
                 Domain-adapted EfficientLoFTR clears Hop 1 ({ov_ft_inl} inliers, {ov_ft_ratio:.1f}% ratio) and with Phase Congruency clears Hop 2 cross-modal ({ov_h2_pc_inl} inliers, {ov_h2_pc_ratio:.1f}% ratio, RMSE 9.05 px, seed {ov_ft_seed}).
             </p>
         </div>
-        <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
-            <h4 style="color:#1a1a2e; margin-top:0;">5. Gigabyte-Scale Memory Mapping</h4>
-            <p style="color:#555; font-size:0.88rem; line-height:1.6;">
+        <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem;">
+            <h4 style="color:#E2E8F0; margin-top:0;">5. Gigabyte-Scale Memory Mapping</h4>
+            <p style="color:#94A3B8; font-size:0.88rem; line-height:1.6;">
                 Zero-copy <code>np.memmap</code> enables rapid sub-window extraction directly from 1.5 GB TMC-2 and 2.6 GB IIRS binary files without RAM exhaustion.
             </p>
         </div>
-        <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
-            <h4 style="color:#1a1a2e; margin-top:0;">6. 3D Selenographic KD-Tree & Autonomous Safety</h4>
-            <p style="color:#555; font-size:0.88rem; line-height:1.6;">
+        <div style="background:#1E293B; border:1px solid rgba(100,116,139,0.2); border-radius:10px; padding:1.2rem;">
+            <h4 style="color:#E2E8F0; margin-top:0;">6. 3D Selenographic KD-Tree & Autonomous Safety</h4>
+            <p style="color:#94A3B8; font-size:0.88rem; line-height:1.6;">
                 Converts spherical coordinates to 3D Cartesian coordinates on a 1,737.4 km lunar sphere to resolve polar meridian singularities, combined with real-time SWIR SNR gating to prevent registration divergence over low-signal regolith.
             </p>
         </div>
