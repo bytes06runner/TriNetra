@@ -1394,48 +1394,46 @@ if st.session_state.active_scene == "hop1":
                         else:
                             badge_html = '<span style="background:#FEFCBF; color:#744210; padding:2px 8px; border-radius:4px; font-weight:600;">⚠️ Unreliable (&lt;20 inliers)</span>'
 
-                        rows_html += f"""
-                            <tr style="border-bottom:1px solid rgba(100,116,139,0.15);">
-                                <td style="padding:8px 12px; font-weight:600;">{hop_name}: {matcher_name}</td>
-                                <td style="padding:8px 12px;">{inl} / {raw}</td>
-                                <td style="padding:8px 12px; font-weight:600;">{ratio_str}</td>
-                                <td style="padding:8px 12px;">{px_str}</td>
-                                <td style="padding:8px 12px;">{m_str}</td>
-                                <td style="padding:8px 12px; font-size:0.8rem; color:#64748B;">{runtime:.2f}s ({dev})</td>
-                                <td style="padding:8px 12px;">{badge_html}</td>
-                            </tr>
-                        """
+                        rows_html += (
+                            f'<tr style="border-bottom:1px solid rgba(177,173,161,0.3);">'
+                            f'<td style="padding:10px 12px; font-weight:600; color:#1E1E24;">{hop_name}: {matcher_name}</td>'
+                            f'<td style="padding:10px 12px; color:#1E1E24;">{inl} / {raw}</td>'
+                            f'<td style="padding:10px 12px; font-weight:600; color:#1E1E24;">{ratio_str}</td>'
+                            f'<td style="padding:10px 12px; color:#4A4740;">{px_str}</td>'
+                            f'<td style="padding:10px 12px; color:#4A4740;">{m_str}</td>'
+                            f'<td style="padding:10px 12px; font-size:0.8rem; color:#8C877D;">{runtime:.2f}s ({dev})</td>'
+                            f'<td style="padding:10px 12px;">{badge_html}</td>'
+                            f'</tr>\n'
+                        )
 
-                    st.markdown(f"""
-                    <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                        <h4 style="margin-top:0; color:#1E1E24;">📊 Measured Zero-Shot Baseline Scorecard (All 12 Configurations)</h4>
-                        <p style="color:#4A4740; font-size:0.9rem; line-height:1.6;">
-                            Empirical zero-shot baselines measured directly on authentic Chandrayaan-2 flight crops across 4 state-of-the-art matchers.
-                        </p>
-                        <table style="width:100%; border-collapse:collapse; font-size:0.88rem; text-align:left;">
-                            <thead>
-                                <tr style="background:#0F172A; border-bottom:2px solid rgba(100,116,139,0.3);">
-                                    <th style="padding:8px 12px;">Configuration</th>
-                                    <th style="padding:8px 12px;">Matches (Inl/Raw)</th>
-                                    <th style="padding:8px 12px;">Inlier Ratio</th>
-                                    <th style="padding:8px 12px;">Reproj. Error (px)</th>
-                                    <th style="padding:8px 12px;">Reproj. Error (m)</th>
-                                    <th style="padding:8px 12px;">Runtime</th>
-                                    <th style="padding:8px 12px;">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rows_html}
-                            </tbody>
-                        </table>
-                        <br/>
-                        <div style="background:#F7FAFC; border-left:4px solid #3182CE; padding:0.8rem 1rem; font-size:0.88rem; color:#2D3748;">
-                            <strong>Scientific Takeaways from Empirical Baselines:</strong><br/>
-                            1. <strong>Hop 1 (OHRC ↔ TMC-2, 18.15× gap):</strong> Terrestrial models struggle with extreme cross-scale disparity and 15.8° roll parallax. Dense matching (EfficientLoFTR) extracts 116 candidate correspondences but yields only 8 inliers (6.9% ratio) under standard RANSAC, failing the spaceflight gate.<br/>
-                            2. <strong>Hop 2 (TMC-2 ↔ IIRS, 14.49× gap):</strong> All 4 zero-shot deep matchers fail the spaceflight gate (e.g. EfficientLoFTR: 15 inliers / 10.9% ratio; MatchAnything: 12 inliers / 21.1% ratio, failing the 20-inlier floor). Domain adaptation and phase congruency are required to clear the gate (see Hop 2 section).
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    table_html = (
+                        '<div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem; overflow-x:auto;">'
+                        '<h4 style="margin-top:0; color:#1E1E24;">📊 Measured Zero-Shot Baseline Scorecard (All 12 Configurations)</h4>'
+                        '<p style="color:#4A4740; font-size:0.9rem; line-height:1.6; margin-bottom:1rem;">'
+                        'Empirical zero-shot baselines measured directly on authentic Chandrayaan-2 flight crops across 4 state-of-the-art matchers.'
+                        '</p>'
+                        '<table style="width:100%; border-collapse:collapse; font-size:0.86rem; text-align:left;">'
+                        '<thead>'
+                        '<tr style="background:#F4F3EE; border-bottom:2px solid #B1ADA1; color:#1E1E24;">'
+                        '<th style="padding:10px 12px; font-weight:700;">Configuration</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Matches (Inl/Raw)</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Inlier Ratio</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Reproj. Error (px)</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Reproj. Error (m)</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Runtime</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Status</th>'
+                        '</tr>'
+                        '</thead>'
+                        f'<tbody>{rows_html}</tbody>'
+                        '</table>'
+                        '<div style="background:rgba(244,243,238,0.7); border:1px solid rgba(177,173,161,0.4); border-left:4px solid #C15F3C; border-radius:8px; padding:0.9rem 1.1rem; margin-top:1.2rem; font-size:0.88rem; color:#4A4740; line-height:1.6;">'
+                        '<strong style="color:#C15F3C;">🔬 Scientific Takeaways from Empirical Baselines:</strong><br/>'
+                        '1. <strong>Hop 1 (OHRC ↔ TMC-2, 18.15× gap):</strong> Terrestrial models struggle with extreme cross-scale disparity and 15.8° roll parallax. Dense matching (EfficientLoFTR) extracts 116 candidate correspondences but yields only 8 inliers (6.9% ratio) under standard RANSAC, failing the spaceflight gate.<br/>'
+                        '2. <strong>Hop 2 (TMC-2 ↔ IIRS, 14.49× gap):</strong> All 4 zero-shot deep matchers fail the spaceflight gate (e.g. EfficientLoFTR: 15 inliers / 10.9% ratio; MatchAnything: 12 inliers / 21.1% ratio, failing the 20-inlier floor). Domain adaptation and phase congruency are required to clear the gate (see Hop 2 section).'
+                        '</div>'
+                        '</div>'
+                    )
+                    st.markdown(table_html, unsafe_allow_html=True)
 
             # TAB 2: Training Dynamics & Overfitting Detection
             with h1_tabs[1]:
@@ -1936,55 +1934,51 @@ elif st.session_state.active_scene == "hop2":
 
                         err_str = f"{err_px:.2f} px ({err_m:.1f} m)" if (err_px is not None and "DEGENERATE" not in status_m) else "—"
 
-                        rows_h2_all += f"""
-                            <tr style="border-bottom:1px solid rgba(100,116,139,0.15);">
-                                <td style="padding:8px 12px; font-family:monospace; font-size:0.8rem;">{att_id}</td>
-                                <td style="padding:8px 12px; font-weight:600;">{matcher}</td>
-                                <td style="padding:8px 12px; font-size:0.82rem; color:#4A4740;">{preproc}</td>
-                                <td style="padding:8px 12px;">{inl_m} / {raw_m}</td>
-                                <td style="padding:8px 12px; font-weight:600;">{rat_m:.1f}%</td>
-                                <td style="padding:8px 12px;">{err_str}</td>
-                                <td style="padding:8px 12px; font-size:0.8rem; color:#64748B;">{time_s:.2f}s</td>
-                                <td style="padding:8px 12px;">{badge_html}</td>
-                            </tr>
-                        """
+                        rows_h2_all += (
+                            f'<tr style="border-bottom:1px solid rgba(177,173,161,0.3);">'
+                            f'<td style="padding:10px 12px; font-family:monospace; font-size:0.8rem; color:#1E1E24;">{att_id}</td>'
+                            f'<td style="padding:10px 12px; font-weight:600; color:#1E1E24;">{matcher}</td>'
+                            f'<td style="padding:10px 12px; font-size:0.82rem; color:#4A4740;">{preproc}</td>'
+                            f'<td style="padding:10px 12px; color:#1E1E24;">{inl_m} / {raw_m}</td>'
+                            f'<td style="padding:10px 12px; font-weight:600; color:#1E1E24;">{rat_m:.1f}%</td>'
+                            f'<td style="padding:10px 12px; color:#4A4740;">{err_str}</td>'
+                            f'<td style="padding:10px 12px; font-size:0.8rem; color:#8C877D;">{time_s:.2f}s</td>'
+                            f'<td style="padding:10px 12px;">{badge_html}</td>'
+                            f'</tr>\n'
+                        )
 
-                    st.markdown(f"""
-                    <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                        <h4 style="margin-top:0; color:#1E1E24;">📊 Hop 2 Empirical Progression Scorecard (10 Independent Configurations)</h4>
-                        <p style="color:#4A4740; font-size:0.9rem; line-height:1.6;">
-                            Rigorous empirical evaluation across algorithmic avenues on authentic Chandrayaan-2 South Pole flight data (seed=42).
-                        </p>
-                        <table style="width:100%; border-collapse:collapse; font-size:0.86rem; text-align:left;">
-                            <thead>
-                                <tr style="background:#0F172A; border-bottom:2px solid rgba(100,116,139,0.3);">
-                                    <th style="padding:8px 12px;">Attempt</th>
-                                    <th style="padding:8px 12px;">Matcher</th>
-                                    <th style="padding:8px 12px;">Preprocessing</th>
-                                    <th style="padding:8px 12px;">Matches (Inl/Raw)</th>
-                                    <th style="padding:8px 12px;">Inlier Ratio</th>
-                                    <th style="padding:8px 12px;">Reproj. Error</th>
-                                    <th style="padding:8px 12px;">Runtime</th>
-                                    <th style="padding:8px 12px;">Gate Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rows_h2_all}
-                            </tbody>
-                        </table>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    st.markdown("""
-                    <div style="background:rgba(244,243,238,0.7); border:1px solid rgba(177,173,161,0.4); border-radius:8px; padding:0.9rem; margin-top:1rem;">
-                        <strong style="color:#C15F3C;">🔬 Scientific Takeaways from the Empirical Scorecard:</strong>
-                        <ul style="margin-top:0.4rem; margin-bottom:0.2rem; font-size:0.88rem; color:#4A4740; line-height:1.5;">
-                            <li><strong>SIFT Failure:</strong> Classical gradient-based keypoint descriptors fail completely across the 14.49× scale divide and SWIR absorption bands (2.2% inlier ratio).</li>
-                            <li><strong>Zero-Shot Deep Limitations:</strong> While LoFTR, LightGlue, and MatchAnything detect preliminary matches, all zero-shot configurations remain gated (&lt;25% ratio) due to severe radiometric domain shift between visible reflectance and mineral absorptions.</li>
-                            <li><strong>Phase Congruency Solution:</strong> By transforming images from sensor radiance to local frequency phase alignment (Peter Kovesi's Log-Gabor filter bank), fine-tuned LoFTR achieves <strong>40.4% inlier ratio (124 inliers)</strong>, clearing the spaceflight gate.</li>
-                        </ul>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    table_h2_html = (
+                        '<div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem; overflow-x:auto;">'
+                        '<h4 style="margin-top:0; color:#1E1E24;">📊 Hop 2 Empirical Progression Scorecard (10 Independent Configurations)</h4>'
+                        '<p style="color:#4A4740; font-size:0.9rem; line-height:1.6; margin-bottom:1rem;">'
+                        'Rigorous empirical evaluation across algorithmic avenues on authentic Chandrayaan-2 South Pole flight data (seed=42).'
+                        '</p>'
+                        '<table style="width:100%; border-collapse:collapse; font-size:0.86rem; text-align:left;">'
+                        '<thead>'
+                        '<tr style="background:#F4F3EE; border-bottom:2px solid #B1ADA1; color:#1E1E24;">'
+                        '<th style="padding:10px 12px; font-weight:700;">Attempt</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Matcher</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Preprocessing</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Matches (Inl/Raw)</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Inlier Ratio</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Reproj. Error</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Runtime</th>'
+                        '<th style="padding:10px 12px; font-weight:700;">Gate Status</th>'
+                        '</tr>'
+                        '</thead>'
+                        f'<tbody>{rows_h2_all}</tbody>'
+                        '</table>'
+                        '<div style="background:rgba(244,243,238,0.7); border:1px solid rgba(177,173,161,0.4); border-left:4px solid #C15F3C; border-radius:8px; padding:0.9rem 1.1rem; margin-top:1.2rem; font-size:0.88rem; color:#4A4740; line-height:1.6;">'
+                        '<strong style="color:#C15F3C;">🔬 Scientific Takeaways from the Empirical Scorecard:</strong>'
+                        '<ul style="margin-top:0.4rem; margin-bottom:0.2rem; font-size:0.88rem; color:#4A4740; line-height:1.5;">'
+                        '<li><strong>SIFT Failure:</strong> Classical gradient-based keypoint descriptors fail completely across the 14.49× scale divide and SWIR absorption bands (2.2% inlier ratio).</li>'
+                        '<li><strong>Zero-Shot Deep Limitations:</strong> While LoFTR, LightGlue, and MatchAnything detect preliminary matches, all zero-shot configurations remain gated (&lt;25% ratio) due to severe radiometric domain shift between visible reflectance and mineral absorptions.</li>'
+                        '<li><strong>Phase Congruency Solution:</strong> By transforming images from sensor radiance to local frequency phase alignment (Peter Kovesi\'s Log-Gabor filter bank), fine-tuned LoFTR achieves <strong>40.4% inlier ratio (124 inliers)</strong>, clearing the spaceflight gate.</li>'
+                        '</ul>'
+                        '</div>'
+                        '</div>'
+                    )
+                    st.markdown(table_h2_html, unsafe_allow_html=True)
 
             # TAB 2: Training Dynamics & Phase Invariance
             with h2_tabs[1]:
