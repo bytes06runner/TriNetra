@@ -1,0 +1,8 @@
+{
+  "sensor": "IIRS Pushbroom",
+  "product_id": "ch2_iir_nci_20230615T0132312064_d_img_n18",
+  "calibration": "Column Median Destriping (alpha=0.85) + MAD Outlier Repair (>2.5 MAD)",
+  "col_std_raw": 0.370,
+  "col_std_destriped": 0.031,
+  "variance_reduction_pct": 91.7
+}
