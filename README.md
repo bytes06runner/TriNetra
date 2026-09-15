@@ -63,7 +63,7 @@
 2. **The Physics-Grounded Rendering Engine:** To bridge this domain chasm without manually annotating hazardous polar terrain, we built a physical ray-marching photometric rendering engine directly on the LOLA 5m DEM (`Site04_final_adj_5mpp_surf.tif`). The engine incorporates **horizon-angle directional sky-view ambient floor modeling** ($S_v$), **Lommel-Seeliger lunar surface scattering**, and **calibrated regolith particulate noise** matching authentic uncalibrated OHRC sensor standard deviation ($27.34$ vs $27.58\text{ DN}$).
 3. **Synthetic Pretraining at Scale:** We generated **15,000 accepted synthetic illumination pairs** under four concurrent in-flight rejection gates (68.1% rejection rate over 47,000 attempts) and packed them into 15 streaming-ready `.npz` shards (<1.4 GB total).
 4. **Hop 1 Spaceflight Gate Cleared (22.6% Inliers):** Fine-tuning EfficientLoFTR with Rotary Position Embeddings (RoPE) at native $256\times 256$ resolution produced a breakthrough checkpoint at Epoch 7. Evaluated on authentic Chandrayaan-2 OHRC ↔ TMC-2 polar flight imagery, TriNetra achieved **217 raw matches, 49 consensus inliers (22.6% inlier ratio, `cv2_rng_seed=42`)**, and **~5.1 px reprojection RMSE**, **clearing the Hop 1 spaceflight safety gate**.
-5. **Hop 2 Cross-Modal Gate Cleared (40.4% Inliers):** Direct transfer of our fine-tuned LoFTR checkpoint to visible ↔ SWIR (TMC-2 ↔ IIRS) cleared the gate at **42 inliers (23.2% ratio)**. Coupling domain adaptation with **Peter Kovesi's Log-Gabor Phase Congruency ($M_{\max}$)** eliminated spectral contrast reversals, boosting performance to **124 consensus inliers (40.4% inlier ratio, seed 42)** with RMSE 9.05 px (618.5 m), officially completing the multi-hop transformation composition chain $H_{\text{OHRC} \to \text{IIRS}} = H_{\text{TMC-2} \to \text{IIRS}} \cdot H_{\text{OHRC} \to \text{TMC-2}}$.
+5. **Hop 2 Cross-Modal Gate Cleared (40.4% Inliers):** Coupling domain adaptation with **Peter Kovesi's Log-Gabor Phase Congruency ($M_{\max}$)** eliminated spectral contrast reversals, boosting performance to **124 consensus inliers (40.4% inlier ratio, seed 42)** with RMSE 9.05 px (618.5 m) on authentic TMC-2 ↔ IIRS South Pole imagery. This validates the second leg of the design-level multi-hop transformation composition chain $H_{\text{OHRC} \to \text{IIRS}} = H_{\text{TMC-2} \to \text{IIRS}} \cdot H_{\text{OHRC} \to \text{TMC-2}}$.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -313,14 +313,12 @@ The primary unaddressed challenge in planetary multi-sensor registration is the 
 
 ### Systematic Empirical Progression (11 Independent Configurations)
 
-We tested three principled algorithmic avenues on authentic Chandrayaan-2 South Pole flight imagery (`polar_flight_hop2.npz`, `cv2_rng_seed=42`):
-- **Attempt 1a (Direct Domain Adaptation Transfer):** Evaluated whether the Hop 1 lunar-fine-tuned EfficientLoFTR checkpoint transfers zero-shot to visible ↔ SWIR pairs without any cross-modal fine-tuning.
-- **Attempt 1b (Frequency-Domain Phase Congruency Preprocessing):** Passed both sensors through a 4-scale, 6-orientation 2D Log-Gabor filter bank ([`src/phase_congruency.py`](src/phase_congruency.py)) to isolate frequency-domain phase coherence ($M_{\max}$), followed by matching across all 5 matchers.
+We evaluated principled algorithmic avenues on authentic Chandrayaan-2 South Pole flight imagery (`polar_flight_hop2.npz`, `cv2_rng_seed=42`):
+- **Attempt 1b (Frequency-Domain Phase Congruency Preprocessing):** Passed both sensors through a 4-scale, 6-orientation 2D Log-Gabor filter bank ([`src/phase_congruency.py`](src/phase_congruency.py)) to isolate frequency-domain phase coherence ($M_{\max}$), followed by matching across all matchers.
 - **Attempt 1c (Tuned Band Selection):** Correlated all 256 IIRS channels against TMC-2 to isolate the single optimal spectral proxy (Band 48, 1504.4 nm, $r = -0.0467$).
 
 | Attempt ID | Algorithmic Approach | Preprocessing / Representation | Matcher Architecture | Raw Matches | Consensus Inliers (`seed=42`) | Inlier Ratio | Reproj. RMSE (px / m) | Gate Status |
 | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| `1a_finetuned_direct_transfer` | **Direct Transfer** | Standard display crops ($256\times 256$) | **Fine-Tuned EfficientLoFTR** | **181** | **42** | **23.2%** | **10.8 px (738.8 m)** | **✅ CLEARED** |
 | `1b_sift_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | SIFT Canonical | 148 | 4 | 2.7% | 5.91 px (404.2 m) | ⚠️ DEGENERATE |
 | `1b_lightglue_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | LightGlue + SuperPoint | 6 | 3 | 50.0% | 3.94 px (269.7 m) | ⚠️ DEGENERATE |
 | `1b_eloftr_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | EfficientLoFTR (Zero-Shot) | 40 | 8 | 20.0% | 3.62 px (247.7 m) | 🛑 GATED (<20 inl) |
@@ -334,26 +332,27 @@ We tested three principled algorithmic avenues on authentic Chandrayaan-2 South 
 
 ### Key Scientific Findings
 
-1. **Direct Domain Transfer Clears the Gate (Attempt 1a):**
-   Fine-tuning on synthetic DEM pairs taught EfficientLoFTR to attend to fundamental topographic invariant primitives (crater rims, central peaks, ridge slope boundaries) rather than surface albedo. When evaluated directly on TMC-2 ↔ IIRS without any cross-modal training data, it achieved **42 inliers (23.2% ratio)**, immediately clearing the spaceflight gate ($\ge 20$ inliers, $\ge 15.0\%$ ratio).
-2. **Phase Congruency Supercharges Inliers to 124 (Attempt 1b):**
+1. **Phase Congruency Supercharges Inliers to 124 (Attempt 1b):**
    Peter Kovesi's 2D Log-Gabor phase congruency formulation computes the maximum moment of frequency phase alignment:
    $$PC(x, y) = \frac{\sum_o E_o(x, y)}{\epsilon + \sum_o \sum_n A_{n,o}(x, y)}$$
-   Because phase congruency measures where Fourier harmonics are in phase rather than absolute gradient magnitudes, it is **strictly invariant to monotonic and non-monotonic radiometric contrast inversions**. Combining phase congruency with our fine-tuned LoFTR model yielded **124 consensus inliers (40.4% ratio)**, a **$20.7\times$ inlier increase over classical SIFT**.
-3. **Zero-Shot Matchers Remain Strictly Gated Across All Representations:**
-   Zero-shot models (SIFT, LightGlue, zero-shot LoFTR, MatchAnything) failed the spaceflight gate across all 3 representations (0 to 13 inliers), demonstrating that cross-modal lunar registration cannot be solved by off-the-shelf terrestrial models.
+   Because phase congruency measures where Fourier harmonics are in phase rather than absolute gradient magnitudes, it is **strictly invariant to monotonic and non-monotonic radiometric contrast inversions**. Combining phase congruency with our fine-tuned LoFTR model yielded **124 consensus inliers (40.4% ratio)**, a **$20.7\times$ inlier increase over classical SIFT**, with an estimated scale of **$1.0580$** and rotation of **$-0.34^\circ$** matching physical ground geometry.
+2. **Zero-Shot Matchers Remain Strictly Gated Across All Representations:**
+   Zero-shot models (SIFT, LightGlue, zero-shot LoFTR, MatchAnything) failed the spaceflight gate across all representations (0 to 13 inliers), demonstrating that cross-modal lunar registration cannot be solved by off-the-shelf terrestrial models.
+
+> **⚠️ Physical Resolution & Sub-Pixel Constraint:**
+> Phase congruency filters out monotonic photometric inversion and extracts frequency-phase edges and ridges. However, IIRS is natively 120×120 pixels (68.38 m/px GSD). Sub-kilometer craters clearly visible in TMC-2 (4.72 m/px) are simply not resolved in IIRS. Therefore, Attempt 1b is not matching micro-craters; it is genuinely and accurately matching macroscopic crater rims (>1.5 km diameter), mountain ridges, and primary topographic fault lines across the visible/SWIR divide. Given the PS explicitly asks for sub-pixel accuracy and our RMSE here is 618.5 m (9.05 px at 68.38 m/px GSD), achieving true sub-pixel registration on unresolved terrain remains an open physical limitation.
 
 <p align="center">
-  <img src="assets/qa/hop2_finetuned_verification.png" width="48%" alt="Direct Domain Adaptation Transfer (42 Inliers)"/>
-  <img src="assets/qa/hop2_pc_verification.png" width="48%" alt="Phase Congruency + Fine-Tuned LoFTR (124 Inliers)"/>
-  <br/><em>Figure 4: Authentic flight verification on Chandrayaan-2 TMC-2 (left) and IIRS (right) South Pole imagery. Left: Attempt 1a Direct Transfer (42 inliers, 23.2% ratio). Right: Attempt 1b Phase Congruency + LoFTR (124 inliers, 40.4% ratio), completely resolving cross-modal registration.</em>
+  <img src="outputs/qa/hop2_1b_manual_check.png" width="48%" alt="Phase Congruency + Fine-Tuned LoFTR (124 Inliers)"/>
+  <img src="outputs/qa/hop2_1b_on_pc_maps.png" width="48%" alt="Underlying Phase Congruency Energy Maps"/>
+  <br/><em>Figure 4: Authentic flight verification on Chandrayaan-2 TMC-2 (left) and IIRS (right) South Pole imagery. Left: Attempt 1b Phase Congruency + LoFTR (124 inliers, 40.4% ratio, scale 1.058, rot -0.34°). Right: Underlying Log-Gabor M_max phase congruency energy maps.</em>
 </p>
 
-### Multi-Hop Composition Chain Closed
+### Design-Level Multi-Hop Composition Target
 
-With both Hop 1 and Hop 2 independently cleared, TriNetra establishes the complete end-to-end composite planetary transformation:
+With both Hop 1 and Hop 2 independently cleared, TriNetra formulates the design-level multi-hop composite planetary transformation:
 $$\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}$$
-enabling sub-meter hazard features mapped by OHRC (0.26 m/px) to be directly registered onto IIRS SWIR mineralogical hyperspectral cubes (68.38 m/px).
+*Ground Footprint Note:* Hop 1's anchor (−69.58°S) and Hop 2's anchor (−70.85°S) are different sites ~38 km apart on the same continuous TMC-2 strip. The composed transform is a design-level composition of two independently-validated transforms at different locations along the orbit corridor, not a single validated three-instrument chain at one site (matching Section 3 of the technical document).
 
 ---
 
@@ -400,7 +399,7 @@ TriNetra includes an interactive Streamlit application featuring a dark, high-co
 - **Hop 2 — Step 3 (Cross-Modal Registration & Verification Overlay):**
   - **Tab 1:** Baseline SIFT (2.2% inlier ratio, 🛑 GATED, illustrative candidate overlay).
   - **Tab 2:** Hop 2 Zero-Shot Baseline Scorecard (all 4 off-the-shelf terrestrial matchers fail the spaceflight gate).
-  - **Tab 3:** Cross-Modal Breakthrough (**✅ CLEARED — 23.2% Direct Transfer / 40.4% Phase Congruency, 42–124 inliers, `cv2_rng_seed=42`**), displaying the 11-attempt matrix, progression cards, engineering methodology, and dual flight verification overlays.
+  - **Tab 3:** Cross-Modal Breakthrough (**✅ CLEARED — 40.4% Phase Congruency, 124 inliers, `cv2_rng_seed=42`**), displaying the 10-attempt matrix, 3-card progression, engineering methodology, physical resolution constraints, and flight verification overlays.
 - **System Overview & Mission Pillars:** Technical briefing, mathematical multi-hop transformation composition ($T_{\text{OHRC} \to \text{IIRS}} = T_{\text{TMC-2} \to \text{IIRS}} \cdot T_{\text{OHRC} \to \text{TMC-2}}$), and architectural pillars for ISRO jury evaluation.
 
 ---

@@ -235,39 +235,6 @@ def main():
     attempts_log: List[Dict[str, Any]] = []
 
     # ─────────────────────────────────────────────────────────────────────────
-    # ATTEMPT 1A: Direct Transfer of Hop 1 Fine-Tuned Checkpoint
-    # ─────────────────────────────────────────────────────────────────────────
-    print("\n" + "─" * 85)
-    print("🧪 ATTEMPT 1a: Direct Transfer of Hop 1 Fine-Tuned LoFTR Checkpoint")
-    print("─" * 85)
-    print("   Hypothesis: Features learned on synthetic LOLA DEM pairs transfer to visible-SWIR.")
-    t0 = time.time()
-    pts1_1a, pts2_1a = run_finetuned_loftr(disp_tmc, disp_iirs)
-    res_1a = evaluate_4dof(pts1_1a, pts2_1a)
-    elapsed_1a = time.time() - t0
-
-    log_1a = {
-        "attempt_id": "1a_finetuned_direct_transfer",
-        "approach": "Direct Transfer: Hop 1 Fine-Tuned LoFTR (Epoch 7)",
-        "preprocessing": "Standard display crops (256x256 RoPE input)",
-        "matcher": "Fine-Tuned EfficientLoFTR (lunar adapted)",
-        "raw_matches": res_1a["raw_matches"],
-        "inliers": res_1a["inliers"],
-        "inlier_ratio_pct": res_1a["inlier_ratio_pct"],
-        "rmse_px": res_1a["rmse_px"],
-        "rmse_m": res_1a["rmse_m"],
-        "status": res_1a["status"],
-        "gate_status": res_1a["gate_status"],
-        "runtime_s": round(elapsed_1a, 2),
-        "cv2_rng_seed": RNG_SEED,
-    }
-    attempts_log.append(log_1a)
-    print(f"   Results: {res_1a['inliers']}/{res_1a['raw_matches']} inliers ({res_1a['inlier_ratio_pct']}%) | RMSE: {res_1a['rmse_px']} px ({res_1a['rmse_m']} m) | Gate: {res_1a['gate_status']}")
-
-    if res_1a["gate_status"] == "CLEARED":
-        print("   🎉 SUCCESS: Attempt 1a CLEARED the spaceflight gate! Continuing to benchmark 1b and 1c for complete comparative record.")
-
-    # ─────────────────────────────────────────────────────────────────────────
     # ATTEMPT 1B: Phase Congruency Preprocessing (Log-Gabor Filter Bank)
     # ─────────────────────────────────────────────────────────────────────────
     print("\n" + "─" * 85)
@@ -453,11 +420,6 @@ def main():
     print("=" * 85)
     save_and_exit(
         attempts_log,
-        pts1_1a=pts1_1a,
-        pts2_1a=pts2_1a,
-        mask_1a=res_1a["mask"],
-        disp_tmc=disp_tmc,
-        disp_iirs=disp_iirs,
         pts1_pc=pts1_pc_ft,
         pts2_pc=pts2_pc_ft,
         mask_pc=mask_pc_ft,
@@ -466,7 +428,7 @@ def main():
     )
 
 
-def save_and_exit(attempts_log, pts1_1a=None, pts2_1a=None, mask_1a=None, disp_tmc=None, disp_iirs=None, pts1_pc=None, pts2_pc=None, mask_pc=None, pc_tmc=None, pc_iirs=None):
+def save_and_exit(attempts_log, pts1_pc=None, pts2_pc=None, mask_pc=None, pc_tmc=None, pc_iirs=None):
     BASELINES_DIR.mkdir(parents=True, exist_ok=True)
     with open(OUTPUT_JSON, "w") as f:
         json.dump(attempts_log, f, indent=2)
@@ -477,28 +439,6 @@ def save_and_exit(attempts_log, pts1_1a=None, pts2_1a=None, mask_1a=None, disp_t
     qa_dir.mkdir(parents=True, exist_ok=True)
     outputs_qa = REPO_ROOT / "outputs" / "qa"
     outputs_qa.mkdir(parents=True, exist_ok=True)
-
-    # 1. Verification for Attempt 1a
-    if pts1_1a is not None and pts2_1a is not None and mask_1a is not None and disp_tmc is not None:
-        fig, ax = plt.subplots(1, 1, figsize=(15, 8))
-        concat = np.concatenate([disp_tmc, disp_iirs], axis=1)
-        ax.imshow(concat, cmap='gray')
-        ax.axis('off')
-        
-        inliers_num = int(np.sum(mask_1a))
-        ratio_pct = (inliers_num / len(pts1_1a) * 100.0) if len(pts1_1a) > 0 else 0
-        for (x0, y0), (x1, y1) in zip(pts1_1a[~mask_1a], pts2_1a[~mask_1a]):
-            ax.plot([x0, x1 + 800], [y0, y1], color='red', linewidth=1.0, alpha=0.4)
-        for (x0, y0), (x1, y1) in zip(pts1_1a[mask_1a], pts2_1a[mask_1a]):
-            ax.plot([x0, x1 + 800], [y0, y1], color='lime', linewidth=1.5, alpha=0.9)
-            ax.scatter([x0, x1 + 800], [y0, y1], color='lime', s=12)
-
-        ax.set_title(f"Hop 2 (TMC-2 ↔ IIRS): Fine-Tuned LoFTR Direct Transfer\nRaw: {len(pts1_1a)} | Inliers: {inliers_num} ({ratio_pct:.1f}%) | Gate: CLEARED (seed=42)", fontsize=15)
-        plt.tight_layout()
-        plt.savefig(qa_dir / "hop2_finetuned_verification.png", dpi=150)
-        plt.savefig(outputs_qa / "hop2_finetuned_verification.png", dpi=150)
-        plt.close()
-        print(f"   Saved visualization to assets/qa/hop2_finetuned_verification.png")
 
     # 2. Verification for Attempt 1b (Phase Congruency)
     if pts1_pc is not None and pts2_pc is not None and mask_pc is not None and pc_tmc is not None:

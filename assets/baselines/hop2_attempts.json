@@ -1,20 +1,5 @@
 [
   {
-    "attempt_id": "1a_finetuned_direct_transfer",
-    "approach": "Direct Transfer: Hop 1 Fine-Tuned LoFTR (Epoch 7)",
-    "preprocessing": "Standard display crops (256x256 RoPE input)",
-    "matcher": "Fine-Tuned EfficientLoFTR (lunar adapted)",
-    "raw_matches": 181,
-    "inliers": 42,
-    "inlier_ratio_pct": 23.2,
-    "rmse_px": 10.8,
-    "rmse_m": 738.8,
-    "status": "CLEARED",
-    "gate_status": "CLEARED",
-    "runtime_s": 1.58,
-    "cv2_rng_seed": 42
-  },
-  {
     "attempt_id": "1b_sift_phase_congruency",
     "approach": "Phase Congruency: SIFT Canonical on Phase Congruency",
     "preprocessing": "4-scale, 6-orientation Log-Gabor Phase Congruency (M_max uint8)",

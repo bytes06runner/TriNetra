@@ -1464,15 +1464,6 @@ elif st.session_state.active_scene == "hop2":
             baseline_data = load_zeroshot_results()
             h2_attempts = load_hop2_attempts()
 
-            # Direct transfer attempt (1a)
-            dt_att = next((a for a in h2_attempts if a.get("attempt_id") == "1a_finetuned_direct_transfer"), {})
-            dt_inl = int(dt_att.get("inliers", 42))
-            dt_raw = int(dt_att.get("raw_matches", 181))
-            dt_ratio = float(dt_att.get("inlier_ratio_pct", 23.2))
-            dt_rmse_px = float(dt_att.get("rmse_px", 10.8))
-            dt_rmse_m = float(dt_att.get("rmse_m", 738.8))
-            dt_seed = int(dt_att.get("cv2_rng_seed", 42))
-
             # Phase congruency fine-tuned attempt (1b)
             pc_att = next((a for a in h2_attempts if a.get("attempt_id") == "1b_finetuned_phase_congruency"), {})
             pc_inl = int(pc_att.get("inliers", 124))
@@ -1494,13 +1485,14 @@ elif st.session_state.active_scene == "hop2":
             zs_hop2_sift = next((e for e in baseline_data if "SIFT" in e.get("matcher", "") and "Hop 2" in e.get("hop", "")), None)
             h2_sift_inl = int(zs_hop2_sift.get("inliers", flight_h2["inliers"])) if zs_hop2_sift else int(flight_h2["inliers"])
             h2_sift_raw = int(zs_hop2_sift.get("raw_matches", flight_h2["total_matches"])) if zs_hop2_sift else int(flight_h2["total_matches"])
-            h2_sift_ratio = float(zs_hop2_sift.get("inlier_ratio_pct", flight_h2["inlier_ratio"])) if zs_hop2_sift else float(flight_h2["inlier_ratio"])
+            h2_sift_ratio = float(zs_hop2_sift.get("unfiltered_ratio_pct") or zs_hop2_sift.get("inlier_ratio_pct") or flight_h2["inlier_ratio"]) if zs_hop2_sift else float(flight_h2["inlier_ratio"])
+
 
             if is_gated:
                 sol_tabs2 = st.tabs([
                     f"1️⃣ Baseline SIFT (Gated — {flight_h2['inlier_ratio']:.1f}%)",
                     "2️⃣ Zero-Shot Deep Matchers (Gated — All 4 Configs)",
-                    f"3️⃣ Cross-Modal Breakthrough (✅ CLEARED — {dt_ratio:.1f}% Direct / {pc_ratio:.1f}% Phase Congruency)",
+                    f"3️⃣ Cross-Modal Breakthrough (✅ CLEARED — Phase Congruency {pc_ratio:.1f}%)",
                 ])
 
                 # ── Tab 1: Baseline SIFT ──
@@ -1663,29 +1655,26 @@ elif st.session_state.active_scene == "hop2":
                 with sol_tabs2[2]:
                     st.markdown(f"""
                     <div class="status-banner-success">
-                        <strong>✅ Gate CLEARED: Cross-Modal Domain Adaptation &amp; Phase Congruency ({pc_ratio:.1f}% Inlier Ratio, {pc_inl} of {pc_raw} matches, seed={pc_seed})</strong><br/>
+                        <strong>✅ Gate CLEARED: Cross-Modal Phase Congruency + Domain Adaptation ({pc_ratio:.1f}% Inlier Ratio, {pc_inl} of {pc_raw} matches, seed={pc_seed})</strong><br/>
                         Autonomous cross-modal registration between TMC-2 (visible) and IIRS (SWIR) has been solved without retraining on cross-modal pairs.<br/>
-                        Direct transfer of our Hop 1 lunar-adapted EfficientLoFTR weights achieves <strong>{dt_inl} consensus inliers</strong> ({dt_ratio:.1f}% ratio), clearing the spaceflight gate.<br/>
-                        Pairing domain adaptation with <strong>Peter Kovesi's Log-Gabor Phase Congruency</strong> eliminates contrast inversions entirely, yielding <strong>{pc_inl} consensus inliers</strong> ({pc_ratio:.1f}% inlier ratio) at {pc_rmse_px:.2f} px ({pc_rmse_m:.1f} m) error.
+                        Pairing domain-adapted EfficientLoFTR with <strong>Peter Kovesi's Log-Gabor Phase Congruency ($M_{{\\max}}$)</strong> eliminates spectral contrast inversions entirely, yielding <strong>{pc_inl} consensus inliers</strong> ({pc_ratio:.1f}% inlier ratio) at {pc_rmse_px:.2f} px ({pc_rmse_m:.1f} m) error.
                     </div>
                     """, unsafe_allow_html=True)
 
-                    c_h2_p1, c_h2_p2, c_h2_p3, c_h2_p4 = st.columns(4)
+                    c_h2_p1, c_h2_p2, c_h2_p3 = st.columns(3)
                     with c_h2_p1:
                         st.markdown(metric_card("Classical SIFT", f"{h2_sift_ratio:.1f}% Ratio", f"{h2_sift_inl} inliers ({h2_sift_inl}/{h2_sift_raw}), 🛑 GATED"), unsafe_allow_html=True)
                     with c_h2_p2:
                         st.markdown(metric_card("Best Zero-Shot Deep", "21.1% Ratio", "12 inliers (12/57), 🛑 GATED (<20 inl)"), unsafe_allow_html=True)
                     with c_h2_p3:
-                        st.markdown(metric_card("Domain Adaptation Transfer", f"{dt_ratio:.1f}% Ratio", f"{dt_inl} inliers ({dt_inl}/{dt_raw}, seed {dt_seed}), ✅ CLEARED"), unsafe_allow_html=True)
-                    with c_h2_p4:
-                        st.markdown(metric_card("Phase Congruency + Transfer", f"{pc_ratio:.1f}% Ratio", f"{pc_inl} inliers ({pc_inl}/{pc_raw}, seed {pc_seed}), ✅ CLEARED"), unsafe_allow_html=True)
+                        st.markdown(metric_card("Phase Congruency + LoFTR", f"{pc_ratio:.1f}% Ratio", f"{pc_inl} inliers ({pc_inl}/{pc_raw}, seed {pc_seed}), ✅ CLEARED"), unsafe_allow_html=True)
 
-                    # 11-Attempt Empirical Scorecard Table
+                    # Empirical Scorecard Table
                     st.markdown("""
                     <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin:1.5rem 0;">
-                        <h4 style="margin-top:0; color:#1a1a2e;">📊 Hop 2 Empirical Progression Scorecard (11 Independent Configurations)</h4>
+                        <h4 style="margin-top:0; color:#1a1a2e;">📊 Hop 2 Empirical Progression Scorecard (10 Independent Configurations)</h4>
                         <p style="color:#555; font-size:0.9rem; line-height:1.6;">
-                            Rigorous evaluation across 3 algorithmic avenues on authentic Chandrayaan-2 South Pole flight data (seed=42).
+                            Rigorous evaluation across algorithmic avenues on authentic Chandrayaan-2 South Pole flight data (seed=42).
                         </p>
                     """, unsafe_allow_html=True)
 
@@ -1751,11 +1740,20 @@ elif st.session_state.active_scene == "hop2":
                     <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
                         <h4 style="margin-top:0; color:#1a1a2e;">Engineering &amp; Physics Breakdown: How Hop 2 Was Cleared</h4>
                         <ul style="color:#555; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
-                            <li><strong>1a. Domain Adaptation Direct Transfer:</strong> The LoFTR checkpoint fine-tuned on 15,000 synthetic DEM illumination pairs learned illumination-invariant structural morphology (ridge lines, crater rim curvatures, shadow-boundary gradients). Because these geometric contours persist across wavelengths, the visible-band model transfers directly to SWIR, jumping from zero-shot failure (15 inliers, 10.9%) to <strong>42 consensus inliers (23.2% ratio)</strong>.</li>
                             <li><strong>1b. Peter Kovesi's Log-Gabor Phase Congruency:</strong> By projecting both sensors through a 4-scale, 6-orientation 2D Log-Gabor filter bank, we compute the maximum moment of phase congruency ($M_{\\max}$). Phase congruency evaluates where Fourier frequency components are in phase, creating a structural map that is mathematically invariant to non-linear radiometric differences, brightness scaling, and spectral contrast inversions. Coupled with fine-tuned LoFTR, it achieves <strong>124 inliers (40.4% ratio)</strong>.</li>
                             <li><strong>1c. Optimized 1500 nm Channel Selection:</strong> Ingesting the full 256-band IIRS datacube and computing correlation against TMC-2 identified Band 48 (1504.4 nm) as the optimal proxy channel ($r = -0.0467$), achieving <strong>45 inliers (22.2% ratio)</strong>.</li>
-                            <li><strong>Multi-Hop Chain Closure:</strong> With both Hop 1 (22.6%, 49 inliers) and Hop 2 (23.2%–40.4%, 42–124 inliers) cleared, the composite homography $H_{\\text{OHRC} \\to \\text{IIRS}} = H_{\\text{TMC-2} \\to \\text{IIRS}} \\cdot H_{\\text{OHRC} \\to \\text{TMC-2}}$ connects 0.26 m/px hazard avoidance imagery directly to SWIR mineralogy data.</li>
+                            <li><strong>Design-Level Multi-Hop Composition Target:</strong> Hop 1's anchor (Lat −69.58°S) and Hop 2's anchor (Lat −70.85°S) are different sites ~38 km apart on the same continuous TMC-2 strip. The composed transform $H_{\\text{OHRC} \\to \\text{IIRS}} = H_{\\text{TMC-2} \\to \\text{IIRS}} \\cdot H_{\\text{OHRC} \\to \\text{TMC-2}}$ is a design-level composition of two independently-validated transforms at different locations along the continuous TMC-2 track, not a single validated three-instrument chain at one site.</li>
                         </ul>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    # Verbatim Sub-Pixel Limitation Callout
+                    st.markdown("""
+                    <div style="background:#FFF8E7; border:1px solid #FFE0B2; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
+                        <h4 style="margin-top:0; color:#B45309;">⚠️ Physical Resolution &amp; Sub-Pixel Constraint</h4>
+                        <p style="color:#78350F; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
+                            Phase congruency filters out monotonic photometric inversion and extracts frequency-phase edges and ridges. However, IIRS is natively 120×120 pixels (68.38 m/px GSD). Sub-kilometer craters clearly visible in TMC-2 (4.72 m/px) are simply not resolved in IIRS. Therefore, Attempt 1b is not matching micro-craters; it is genuinely and accurately matching macroscopic crater rims (&gt;1.5 km diameter), mountain ridges, and primary topographic fault lines across the visible/SWIR divide. Given the PS explicitly asks for sub-pixel accuracy and our RMSE here is 618.5 m (9.05 px at 68.38 m/px GSD), achieving true sub-pixel registration on unresolved terrain remains an open physical limitation.
+                        </p>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -1763,13 +1761,15 @@ elif st.session_state.active_scene == "hop2":
                     st.markdown("<h4>Visual Verification Gallery (Authentic Flight Overlays)</h4>", unsafe_allow_html=True)
                     c_img1, c_img2 = st.columns(2)
                     with c_img1:
-                        p_dt_img = PROJECT_ROOT / "assets" / "qa" / "hop2_finetuned_verification.png"
-                        if p_dt_img.exists():
-                            st.image(str(p_dt_img), caption=f"Attempt 1a: Direct Domain Transfer ({dt_inl} Inliers, {dt_ratio:.1f}% Ratio, RMSE {dt_rmse_px:.1f} px, seed={dt_seed})", use_container_width=True)
-                    with c_img2:
-                        p_pc_img = PROJECT_ROOT / "assets" / "qa" / "hop2_pc_verification.png"
+                        p_pc_img = PROJECT_ROOT / "outputs" / "qa" / "hop2_1b_manual_check.png"
+                        if not p_pc_img.exists():
+                            p_pc_img = PROJECT_ROOT / "assets" / "qa" / "hop2_pc_verification.png"
                         if p_pc_img.exists():
-                            st.image(str(p_pc_img), caption=f"Attempt 1b: Phase Congruency + LoFTR ({pc_inl} Inliers, {pc_ratio:.1f}% Ratio, RMSE {pc_rmse_px:.2f} px, seed={pc_seed})", use_container_width=True)
+                            st.image(str(p_pc_img), caption=f"Attempt 1b: Phase Congruency Correspondence Overlay ({pc_inl} Inliers, {pc_ratio:.1f}% Ratio, RMSE {pc_rmse_px:.2f} px / {pc_rmse_m:.1f} m, Scale 1.058, Rot -0.34°, seed={pc_seed})", use_container_width=True)
+                    with c_img2:
+                        p_maps_img = PROJECT_ROOT / "outputs" / "qa" / "hop2_1b_on_pc_maps.png"
+                        if p_maps_img.exists():
+                            st.image(str(p_maps_img), caption="Attempt 1b: Underlying Log-Gabor Phase Congruency Energy Maps (M_max)", use_container_width=True)
 
                     st.markdown("""
                     <div class="presenter-box">
@@ -2024,7 +2024,7 @@ elif st.session_state.active_scene == "overview":
             T(OHRC → IIRS) = T(TMC-2 → IIRS) · T(OHRC → TMC-2)
         </p>
         <p style="color:#B45309; background:#FEF3C7; border: 1px solid #FDE68A; border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0.6rem auto; text-align:left; line-height:1.55;">
-            <strong>ℹ️ Multi-Instrument Ground Overlap:</strong> Spherical polygon projection verifies that all three products (<code>ch2_ohr_ncp_20211023T0027462822</code>, <code>ch2_tmc_ncn_20230130T1900132182</code>, and <code>ch2_iir_nri_20231003T2152304115</code>) share common ground at Lat −69.58°S (Shiv Shakti Point). The two flight evaluations shown in Hop 1 (−69.58°S) and Hop 2 (−70.85°S) represent sub-window crops <strong>38.5 km apart</strong> (1.27° latitude on the 1,737.4 km lunar sphere) along the same continuous TMC-2 and IIRS tracks.
+            <strong>ℹ️ Design-Level Multi-Hop Composition:</strong> Hop 1's anchor (Lat −69.58°S) and Hop 2's anchor (Lat −70.85°S) are different sites <strong>~38.5 km apart</strong> (1.27° latitude on the 1,737.4 km lunar sphere) along the same continuous TMC-2 strip. The composed transform <code>T(OHRC → IIRS) = T(TMC-2 → IIRS) · T(OHRC → TMC-2)</code> is therefore a design-level composition of two independently-validated transforms at different locations along the orbit corridor, not a single validated three-instrument chain at one site (matching Section 3 of the technical document).
         </p>
         <p style="color:#065F46; background:#ECFDF5; border: 1px solid #A7F3D0; border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0 auto; text-align:left; line-height:1.55;">
             <strong>🚀 Dual-Gate Scientific Integrity:</strong> Both Hop 1 (OHRC ↔ TMC-2, 18.15×) and Hop 2 (TMC-2 ↔ IIRS, 14.49×) use 4-DoF Similarity Transforms (scale, rotation, translation) suited to orbital pushbroom cameras. Autonomous inlier ratio gating (&lt;15% ratio or &lt;20 inliers) prevents misleading overlays on low-consensus flight pairs, while the North Polar SNR gate (SNR ≈ 1.4) rejects noise-dominated regolith.
@@ -2045,10 +2045,6 @@ elif st.session_state.active_scene == "overview":
     ov_sift_h1 = next((e for e in ov_baseline if "SIFT" in e.get("matcher", "") and "Hop 1" in e.get("hop", "")), {})
     ov_sift_h1_inl = int(ov_sift_h1.get("inliers", 5))
     ov_sift_h1_ratio = float(ov_sift_h1.get("inlier_ratio_pct", 1.2))
-
-    ov_dt_att = next((a for a in ov_h2 if a.get("attempt_id") == "1a_finetuned_direct_transfer"), {})
-    ov_h2_dt_inl = int(ov_dt_att.get("inliers", 42))
-    ov_h2_dt_ratio = float(ov_dt_att.get("inlier_ratio_pct", 23.2))
 
     ov_pc_att = next((a for a in ov_h2 if a.get("attempt_id") == "1b_finetuned_phase_congruency"), {})
     ov_h2_pc_inl = int(ov_pc_att.get("inliers", 124))
@@ -2082,7 +2078,7 @@ elif st.session_state.active_scene == "overview":
             <p style="color:#555; font-size:0.88rem; line-height:1.6;">
                 Evaluated 4 state-of-the-art matchers (SIFT, LightGlue, EfficientLoFTR, MatchAnything) on authentic flight crops.
                 All 12 zero-shot configurations failed the spaceflight gate.
-                Domain-adapted EfficientLoFTR clears Hop 1 ({ov_ft_inl} inliers, {ov_ft_ratio:.1f}% ratio) and directly clears Hop 2 cross-modal ({ov_h2_dt_inl} inliers, {ov_h2_dt_ratio:.1f}% ratio; {ov_h2_pc_inl} inliers / {ov_h2_pc_ratio:.1f}% with Phase Congruency, seed {ov_ft_seed}).
+                Domain-adapted EfficientLoFTR clears Hop 1 ({ov_ft_inl} inliers, {ov_ft_ratio:.1f}% ratio) and with Phase Congruency clears Hop 2 cross-modal ({ov_h2_pc_inl} inliers, {ov_h2_pc_ratio:.1f}% ratio, RMSE 9.05 px, seed {ov_ft_seed}).
             </p>
         </div>
         <div style="background:white; border:1px solid #E8E5DF; border-radius:10px; padding:1.2rem;">
