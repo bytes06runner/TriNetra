@@ -49,24 +49,88 @@ class RegistrationResult:
         )
 
 
-def evaluate_flight_gate(inliers: int, total_matches: int, inlier_ratio_pct: Optional[float] = None) -> dict:
+def evaluate_flight_gate(
+    inliers: int,
+    total_matches: int,
+    inlier_ratio_pct: Optional[float] = None,
+    H: Optional[np.ndarray] = None,
+    expected_scale: Optional[float] = None,
+    max_rotation_deg: float = 30.0,
+    scale_tolerance: float = 0.25,
+    cond_thresh: float = 1e5,
+) -> dict:
     """Evaluate whether a correspondence set satisfies spaceflight safety gates.
 
-    Flight Safety Rule:
-        A transform is gated (withheld from autonomous navigation) if:
-        inlier_ratio_pct < 15.0%  OR  inliers < 20.
+    Flight Safety Rules (evaluated in order):
+        1. Inlier Consensus Rule:
+           inliers < 20  OR  inlier_ratio_pct < 15.0%.
+        2. Matrix Conditioning Rule:
+           cond(H) > 1e5 (ill-conditioned fit prone to numerical instability).
+           Threshold justification from empirical lunar flight data:
+           Passing fits exhibit cond(H) in [689, 3646], whereas degenerate fits
+           exhibit cond(H) in [3.5e5, 2.4e6]. 1e5 cleanly separates both regimes.
+        3. Physical Plausibility Rule:
+           |rotation| > max_rotation_deg (default 30°) OR
+           |scale - expected_scale| / expected_scale > scale_tolerance (default 25%).
     """
     if inlier_ratio_pct is None:
         inlier_ratio_pct = (inliers / total_matches * 100.0) if total_matches > 0 else 0.0
-    
-    is_gated = (inlier_ratio_pct < 15.0 or inliers < 20)
+
+    reasons = []
+    first_failing_criterion = None
+
+    # Criterion 1: Inlier consensus floor
+    if inliers < 20 or inlier_ratio_pct < 15.0:
+        reasons.append(f"Inlier count ({inliers} < 20) or ratio ({inlier_ratio_pct:.1f}% < 15.0%)")
+        if first_failing_criterion is None:
+            first_failing_criterion = "inlier_consensus"
+
+    cond_val = None
+    scale_val = None
+    rot_val = None
+
+    if H is not None:
+        H64 = np.asarray(H, dtype=np.float64)
+        cond_val = float(np.linalg.cond(H64))
+
+        # Criterion 2: Conditioning
+        if cond_val > cond_thresh:
+            reasons.append(f"Ill-conditioned transform: cond(H) = {cond_val:.1e} > {cond_thresh:.1e}")
+            if first_failing_criterion is None:
+                first_failing_criterion = "conditioning"
+
+        # Criterion 3: Physical Plausibility (Scale & Rotation)
+        scale_val = float(np.sqrt(H64[0, 0] ** 2 + H64[1, 0] ** 2))
+        rot_val = float(np.degrees(np.arctan2(H64[1, 0], H64[0, 0])))
+
+        if abs(rot_val) > max_rotation_deg:
+            reasons.append(f"Unphysical rotation: |{rot_val:.1f}°| > {max_rotation_deg:.1f}°")
+            if first_failing_criterion is None:
+                first_failing_criterion = "unphysical_rotation"
+
+        if expected_scale is not None and expected_scale > 0:
+            scale_err = abs(scale_val - expected_scale) / expected_scale
+            if scale_err > scale_tolerance:
+                reasons.append(
+                    f"Unphysical scale: recovered {scale_val:.4f} diverges by {scale_err*100:.1f}% "
+                    f"(> {scale_tolerance*100:.1f}%) from expected {expected_scale:.4f}"
+                )
+                if first_failing_criterion is None:
+                    first_failing_criterion = "unphysical_scale"
+
+    is_gated = len(reasons) > 0
     return {
         "is_gated": is_gated,
         "status": "GATED" if is_gated else "PASSED",
         "inliers": inliers,
         "total_matches": total_matches,
         "inlier_ratio_pct": float(inlier_ratio_pct),
-        "reason": "inliers < 20 or ratio < 15%" if is_gated else "Meets flight safety requirements"
+        "condition_number": cond_val,
+        "recovered_scale": scale_val,
+        "recovered_rotation_deg": rot_val,
+        "reasons": reasons,
+        "first_failing_criterion": first_failing_criterion,
+        "reason": "; ".join(reasons) if is_gated else "Meets flight safety requirements",
     }
 
 

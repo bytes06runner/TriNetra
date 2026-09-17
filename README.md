@@ -32,6 +32,9 @@
 ## 📋 Table of Contents
 
 - [Executive Summary](#-executive-summary)
+- [1. Software (PS Deliverable 1)](#1-software)
+- [2. Registered Product and Match Points (PS Deliverable 2)](#2-registered-product-and-match-points)
+- [3. Evaluation Metrics (PS Deliverable 3)](#3-evaluation-metrics)
 - [The Planetary Correspondence Challenge (ISRO SIH26166)](#-the-planetary-correspondence-challenge-isro-sih26166)
 - [The Systematic 0/12 Zero-Shot Baseline Scorecard](#-the-systematic-012-zero-shot-baseline-scorecard)
 - [Key Technical Innovations](#-key-technical-innovations)
@@ -62,7 +65,7 @@
 1. **The Empirical Negative Baseline (0/12 Gated):** We evaluated four state-of-the-art matchers (classical SIFT, LightGlue+SuperPoint, EfficientLoFTR, and MatchAnything) across authentic Chandrayaan-2 flight crops at both Shiv Shakti Point (-69.58°S) and the Shackleton Rim (-89.72°S) under a standardized 4-DoF similarity transform with RANSAC (`cv2.setRNGSeed(42)`). **All 12 off-the-shelf zero-shot configurations failed the spaceflight gate** ($\ge 20$ inliers, $\ge 15.0\%$ consensus ratio). Classical SIFT degenerated to 1.2% inliers (5 inliers); off-the-shelf deep matchers peaked at 6.9% inliers (8 inliers).
 2. **The Physics-Grounded Rendering Engine:** To bridge this domain chasm without manually annotating hazardous polar terrain, we built a physical ray-marching photometric rendering engine directly on the LOLA 5m DEM (`Site04_final_adj_5mpp_surf.tif`). The engine incorporates **horizon-angle directional sky-view ambient floor modeling** ($S_v$), **Lommel-Seeliger lunar surface scattering**, and **calibrated regolith particulate noise** matching authentic uncalibrated OHRC sensor standard deviation ($27.34$ vs $27.58\text{ DN}$).
 3. **Synthetic Pretraining at Scale:** We generated **15,000 accepted synthetic illumination pairs** under four concurrent in-flight rejection gates (68.1% rejection rate over 47,000 attempts) and packed them into 15 streaming-ready `.npz` shards (<1.4 GB total).
-4. **Hop 1 Spaceflight Gate Cleared (22.6% Inliers):** Fine-tuning EfficientLoFTR with Rotary Position Embeddings (RoPE) at native $256\times 256$ resolution produced a breakthrough checkpoint at Epoch 7. Evaluated on authentic Chandrayaan-2 OHRC ↔ TMC-2 polar flight imagery, TriNetra achieved **217 raw matches, 49 consensus inliers (22.6% inlier ratio, `cv2_rng_seed=42`)**, and **~5.1 px reprojection RMSE**, **clearing the Hop 1 spaceflight safety gate**.
+4. **Hop 1 Spaceflight Gate Cleared (22.6% Inliers):** Fine-tuning EfficientLoFTR with Rotary Position Embeddings (RoPE) at native $256\times 256$ resolution produced a breakthrough checkpoint at Epoch 7. Evaluated on authentic Chandrayaan-2 OHRC ↔ TMC-2 polar flight imagery, TriNetra achieved **217 raw matches, 49 consensus inliers (22.6% inlier ratio, `cv2_rng_seed=42`)**, and **9.23 px reprojection RMSE (43.6 m at TMC-2 GSD)**, **clearing the Hop 1 spaceflight safety gate**.
 5. **Hop 2 Cross-Modal Gate Cleared (40.4% Inliers):** Coupling domain adaptation with **Peter Kovesi's Log-Gabor Phase Congruency ($M_{\max}$)** eliminated spectral contrast reversals, boosting performance to **124 consensus inliers (40.4% inlier ratio, seed 42)** with RMSE 9.05 px (618.5 m) on authentic TMC-2 ↔ IIRS South Pole imagery. This validates the second leg of the design-level multi-hop transformation composition chain $H_{\text{OHRC} \to \text{IIRS}} = H_{\text{TMC-2} \to \text{IIRS}} \cdot H_{\text{OHRC} \to \text{TMC-2}}$.
 
 ```
@@ -80,6 +83,78 @@
 │   🛑 GATED                 🛑 GATED (<20 inl)           ✅ SPACEFLIGHT GATE CLEARED    │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 1. Software
+
+TriNetra provides an autonomous multi-modal lunar remote sensing correspondence library and CLI engineered for authentic Chandrayaan-2 PDS4 observational products (OHRC, TMC-2, and IIRS):
+
+- **Core Package:** `src/trinetra/`
+- **Evaluation Module:** `src/trinetra/evaluate.py`
+- **CLI Entry Point:** `python -m trinetra.evaluate --all`
+- **Mission-Control Dashboard:** `streamlit run app.py` (Live Deployment: [trinetra-i47cv6nzuwappqbgcrrvup4.streamlit.app](https://trinetra-i47cv6nzuwappqbgcrrvup4.streamlit.app))
+- **Standard Dependencies:** Python 3.11 with CPU-friendly scientific stack (`numpy`, `scipy`, `opencv-python-headless`, `matplotlib`, `scikit-image`, `streamlit`).
+
+---
+
+## 2. Registered Product and Match Points
+
+TriNetra exports comprehensive per-hop tie points and consensus inliers under Lunar physical constants ($R_{\text{Moon}} = 1,737,400\text{ m}$):
+
+- **Match Points Directory:** [`results/matchpoints/`](results/matchpoints/)
+  - **Hop 1 Primary:** [`hop1_matches.csv`](results/matchpoints/hop1_matches.csv) (217 matches, 49 inliers, 22.58% consensus) & [`hop1_inliers.geojson`](results/matchpoints/hop1_inliers.geojson)
+  - **Hop 2 Primary:** [`hop2_matches.csv`](results/matchpoints/hop2_matches.csv) (307 matches, 124 inliers, 40.39% consensus) & [`hop2_inliers.geojson`](results/matchpoints/hop2_inliers.geojson)
+  - **Baselines:** [`hop1_sift_matches.csv`](results/matchpoints/hop1_sift_matches.csv) (409 matches, 5 inliers) & [`hop2_sift_matches.csv`](results/matchpoints/hop2_sift_matches.csv) (272 matches, 6 inliers)
+- **CSV Column Specification:**
+  `match_id, src_x, src_y, ref_x, ref_y, residual_px, is_inlier, src_lat, src_lon, ref_lat, ref_lon, confidence`
+- **Planar Coordinate Header (IAU Selenographic Frame):**
+  `# Local planar approximation about anchor (lat, lon). Lunar radius 1737400 m. Valid only within this crop. Not geodetic coordinates.`
+- **Registered Chandrayaan-2 In-Flight Datasets:**
+  - **OHRC (0.26 m/px):** `ch2_ohr_ncp_20211023T0027462822_d_img_d18`
+  - **TMC-2 (4.72 m/px):** `ch2_tmc_ncn_20230130T1900132182_d_img_d32`
+  - **IIRS (68.38 m/px):** `ch2_iir_nri_20231003T2152304115_d_img_d18`
+
+---
+
+## 3. Evaluation Metrics
+
+Sub-pixel accuracy (RMSE < 1 px) is NOT achieved on either hop.
+Hop 1: RMSE 9.23 px at TMC-2 GSD 4.72 m/px = 43.6 m.
+Hop 2: RMSE 9.05 px at IIRS GSD 68.38 m/px = 618.5 m.
+These are structural localisation results across an 18.15x and a
+14.49x resolution divide. The PS target of sub-pixel accuracy is not
+met by the current global 4-DoF model.
+
+Comprehensive scorecards, threshold stability sweeps, and multi-hop error propagation are documented in [`results/METRICS.md`](results/METRICS.md) and [`results/metrics.json`](results/metrics.json).
+
+### Measured Flight Scorecard (Problem Statement Deliverable 3)
+
+| Metric | Hop 1: Baseline SIFT | Hop 1: Fine-Tuned LoFTR | Hop 2: Baseline SIFT | Hop 2: Phase Congruency + LoFTR |
+|:---|:---:|:---:|:---:|:---:|
+| **Sensor Pair** | OHRC ↔ TMC-2 | OHRC ↔ TMC-2 | TMC-2 ↔ IIRS | TMC-2 ↔ IIRS |
+| **Resolution Gap** | 18.15× (0.26 ↔ 4.72 m/px) | 18.15× (0.26 ↔ 4.72 m/px) | 14.49× (4.72 ↔ 68.38 m/px) | 14.49× (4.72 ↔ 68.38 m/px) |
+| **Inliers** | 5 | **49** | 6 | **124** |
+| **Total Matches** | 409 | 217 | 272 | 307 |
+| **Inlier Threshold (px)** | 15.0 px | 15.0 px | 15.0 px | 15.0 px |
+| **Inlier Threshold (m)** | 70.8 m | 70.8 m | 1025.7 m | 1025.7 m |
+| **Inlier Ratio (%)** | 1.22% | **22.58%** | 2.21% | **40.39%** |
+| **Flight Gate Status** | 🛑 GATED (<15% & <20) | ✅ **CLEARED** | 🛑 GATED (<15% & <20) | ✅ **CLEARED** |
+| **Reprojection RMSE (px)** | 5.34 px | 9.23 px | 4.54 px | 9.05 px |
+| **Reprojection RMSE (m)** | 25.2 m | 43.6 m | 310.5 m | 618.5 m |
+| **Sub-Pixel Achieved?** | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) |
+| **8×8 Grid Occupancy** | 5 / 64 (7.8%) | 22 / 64 (34.4%) | 5 / 64 (7.8%) | 39 / 64 (60.9%) |
+| **Grid Count CV (std/mean)** | 0.000 | 0.715 | 0.333 | 0.866 |
+| **NN Mean Distance (px)** | 232.29 px | 39.68 px | 86.20 px | 28.30 px |
+| **Similarity Transform Scale** | 0.9664 | 1.0086 | 0.4210 | 1.0580 |
+| **Similarity Transform Rotation**| -151.15° (Degenerate) | -4.38° | 64.19° (Degenerate) | -0.34° |
+
+### Multi-Hop Transform Composition (OHRC → TMC-2 → IIRS)
+- **Composed Transform Matrix:** $\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}$ (Scale: `1.0671`, Rotation: `-4.72°`, Condition Number: `6336.3`)
+- **Composed RMSE (Error Propagation):** `13.31 px` (`910.3 m` at IIRS GSD 68.38 m/px)
+- **Scientific Caveat:** *This is error propagation through the transform chain, not a direct end-to-end measurement on a shared OHRC↔IIRS overlap.*
+
+---
 
 ---
 
@@ -376,7 +451,7 @@ $$\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{
 
 ### Module 4: Robust Geometric Estimation (MAGSAC++)
 - **File:** [`src/module4_registration/registration.py`](src/module4_registration/registration.py)
-- **Marginalizing Sample Consensus:** Standard RANSAC uses a rigid inlier threshold that fails across disparate scales. MAGSAC++ marginalizes over noise thresholds, providing outlier rejection (>90%) and sub-pixel alignment accuracy.
+- **Marginalizing Sample Consensus:** Standard RANSAC uses a rigid inlier threshold that fails across disparate scales. MAGSAC++ marginalizes over noise thresholds, providing robust outlier rejection across disparate sensor resolutions.
 
 ---
 

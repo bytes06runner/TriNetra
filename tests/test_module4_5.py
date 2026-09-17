@@ -173,3 +173,25 @@ class TestFlightGateAndDegeneracy:
         assert res["is_degenerate"] is False
         assert res["status"] == "VALID"
 
+    def test_flight_gate_rejects_ill_conditioned_matrix(self):
+        # Even with high inliers, cond(H) > 1e5 must trigger gate
+        H_bad = np.array([
+            [-0.846, 0.466, 835.5],
+            [-0.466, -0.846, 1255.2],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float64)
+        res = evaluate_flight_gate(inliers=50, total_matches=100, inlier_ratio_pct=50.0, H=H_bad)
+        assert res["is_gated"] is True
+        assert any("Ill-conditioned" in r for r in res["reasons"])
+
+    def test_flight_gate_rejects_unphysical_rotation(self):
+        # Rotation -151 deg exceeds max_rotation_deg (30 deg)
+        H_rot = np.array([
+            [-0.846, 0.466, 0.0],
+            [-0.466, -0.846, 0.0],
+            [0.0, 0.0, 1.0]
+        ], dtype=np.float64)
+        res = evaluate_flight_gate(inliers=50, total_matches=100, inlier_ratio_pct=50.0, H=H_rot, max_rotation_deg=30.0)
+        assert res["is_gated"] is True
+        assert any("Unphysical rotation" in r for r in res["reasons"])
+
