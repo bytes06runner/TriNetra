@@ -1,5 +1,7 @@
 # TriNetra Evaluation Metrics Scorecard (ISRO SIH26166)
 
+> **Disclosure:** Both crops were independently decimated to a common canvas size before matching, which absorbs the nominal 18.15x and 14.49x sensor GSD ratios. Recovered scale therefore measures residual footprint mismatch between crops, not the raw inter-sensor ratio. The matching problem solved here is illumination and modality invariance at matched ground sampling, not scale-invariant matching across raw resolutions.
+
 > **Notice:** All metrics are empirically measured from authentic Chandrayaan-2 flight crops at Shiv Shakti Point (-69.58°S) and South Pole (-70.85°S).
 > Deterministic seed: `42`. Lunar radius: `1,737,400 m`. RANSAC inlier threshold: `15.0 px`.
 
@@ -17,7 +19,7 @@
 | **Inlier Threshold (m)** | 70.8 m | 70.8 m | 1025.7 m | 1025.7 m |
 | **Inlier Ratio (RANSAC)** | 1.22% | **22.58%** | 2.21% | **40.39%** |
 | **Matches Strictly ≤ 15.0 px** | 5 (1.22%) | **47 (21.66%)** [^1] | 6 (2.21%) | **133 (43.32%)** [^1] |
-| **Flight Gate Status (F4)** | 🛑 **GATED** (inlier_consensus) | ✅ **PASSED** (all criteria) | 🛑 **GATED** (inlier_consensus) | ✅ **PASSED** (all criteria) |
+| **Flight Gate Status (F4)** | GATED (inlier_consensus) | PASS (all criteria) | GATED (inlier_consensus) | PASS (all criteria) |
 | **Reprojection RMSE (px)** | 5.34 px | 9.23 px | 4.54 px | 9.05 px |
 | **Reprojection RMSE (m)** | 25.2 m | 43.6 m | 310.5 m | 618.5 m |
 | **Cached RMSE Cross-Check** | 5.3391 (Δ=0.00001) | 9.23 (Δ=0.00155) | 4.5413 (Δ=0.00001) | 9.05 (Δ=0.00488) |
@@ -70,15 +72,14 @@ For each configuration, the 4-DoF similarity transform was independently re-fitt
 
 ## 3. Residual vs Terrain Slope Analysis (F3)
 
-We empirically tested whether reprojection residuals correlate with non-rigid lunar crater-rim parallax by sampling the LOLA south polar DEM (`south_pole_subset.tif`) at every inlier match coordinate:
+We empirically tested whether reprojection residuals correlate with local terrain slope by sampling the LOLA south polar DEM (`south_pole_subset.tif`) at every inlier match coordinate:
 
 | Configuration | Inliers Evaluated (n) | Pearson r (Residual vs Slope) | p-value (Pearson) | Spearman ρ (Residual vs Slope) | p-value (Spearman) | Pearson r (vs |Elev - Mean|) | Spearman ρ (vs |Elev - Mean|) |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Hop 1: OHRC ↔ TMC-2** | 49 | +0.1509 | 0.3006 | +0.1454 | 0.3189 | -0.1353 | -0.2425 |
 | **Hop 2: TMC-2 ↔ IIRS** | 124 | +0.1253 | 0.1656 | +0.1348 | 0.1355 | -0.0985 | -0.1225 |
 
-> **Scientific Finding:** The measured correlation between reprojection residual and local terrain slope is weakly positive ($r = +0.151, p = 0.301$ for Hop 1; $r = +0.125, p = 0.166$ for Hop 2) but is **not statistically significant** at $\alpha = 0.05$.
-> The hypothesis that reprojection residuals are primarily driven by local terrain slope is **unproven** on these crops. Residuals reflect a combined error budget including sensor optical point-spread blur across the large scale gap, unmodeled camera distortion, and sub-pixel localization uncertainty rather than simple terrain parallax alone.
+> **Scientific Finding:** Residuals are not explained by local terrain slope in our measurements (r = +0.151, p = 0.301 Hop 1; r = +0.125, p = 0.166 Hop 2). The error budget is unresolved and likely combines point-spread blur across the scale gap, unmodelled lens distortion, and keypoint localisation uncertainty.
 
 ---
 
@@ -110,31 +111,31 @@ Evaluated on the full match set under the original fitted matrix $H$. The indica
 
 ---
 
-## 5. End-to-End Multi-Hop Transformation Chain
+## 5. Multi-Hop Transform Composition (OHRC → TMC-2 → IIRS)
 
-Composed mapping: $\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}$
-
+- **Composed Transform Matrix:** $\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}$
 - **Composed Scale Factor:** `1.0671`
 - **Composed Rotation:** `-4.72°`
-- **Composed Translation:** `(tx=-67.86, ty=46.42)`
-- **Matrix Condition Number:** `6336.3`
-- **Composed RMSE (Error Propagation):** `13.31 px` (`910.3 m` at IIRS GSD 68.38 m/px)
-- **Sub-Pixel Achieved?** **No** (`13.31 px >= 1.0 px`)
-
-> **Scientific Caveat:** *This is error propagation through the transform chain, not a direct end-to-end measurement on a shared OHRC<->IIRS overlap.*
+- **Composed Translation:** `(-67.9, 46.4)`
+- **Condition Number:** `6336.3`
+- **Linear Error Propagation RMSE (px):** `13.31 px`
+- **Linear Error Propagation RMSE (m):** `910.3 m` (at IIRS GSD 68.38 m/px)
+- **Scientific Caveat:** *This is error propagation through the transform chain, not a direct end-to-end measurement on a shared OHRC<->IIRS overlap.*
 
 ---
 
-## 6. Technical Provenance & Pre-Alignment Audit (F1 & A3/A4)
+## 6. Physical Specifications & Ground Conversions (F7)
 
-### Pre-Alignment Audit (F1 Findings)
-- **Independent Slicing:** Source and reference crops were independently sliced from their respective PDS4 unprojected image arrays (`scripts/align_real_tmc_ohrc.py` lines 27-44; `scripts/align_real_tmc_iirs.py` lines 41-60).
-- **Canvas Normalization:** Both crops were pre-scaled to a common pixel canvas (`1000×1000` for Hop 1, `800×800` for Hop 2) via `cv2.resize()`. This explains why the recovered scale factors are near-identity (~1.009 and ~1.058) rather than the raw sensor GSD ratios (18.15× and 14.49×).
-- **No Prior Orthorectification:** The SLDEM2015 DEM was not used to orthorectify flight crops before matching.
-- **Rotation Recovery:** Relative rotation was NOT pre-aligned. Both sensors shared nominal south-polar flight tracks, and the fine-tuned matcher accurately recovered the small residual trajectory orientation (-4.38° for Hop 1, -0.34° for Hop 2), while classical SIFT degenerated to unphysical rotations (-151.15° and +64.19°).
+### Lunar Coordinate Header & Planet Constant (A1)
+Every match point CSV and GeoJSON contains the exact IAU lunar physical model coordinate header:
+```text
+# Local planar approximation about anchor (lat, lon). Lunar radius 1737400 m. Valid only within this crop. Not geodetic coordinates.
+```
+- **Lunar Mean Radius:** `R = 1,737,400.0 m`
+- **Metres Per Degree Latitude:** `π × 1737400 / 180 = 30,323.35 m/deg`
+- **Metres Per Degree Longitude:** `30,323.35 × cos(latitude) m/deg`
 
-### RANSAC Threshold Provenance (A3)
-- **Threshold:** `15.0 px` explicitly configured across all registration modules.
+### Physical Meaning of the 15.0 px RANSAC Gate (F7b)
 - **Ground Metric at Hop 1 (TMC-2 4.72 m/px):** `15.0 px × 4.72 m/px = 70.80 m`.
 - **Ground Metric at Hop 2 (IIRS 68.38 m/px):** `15.0 px × 68.38 m/px = 1,025.70 m`.
 

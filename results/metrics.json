@@ -38,6 +38,16 @@
         "first_failing_criterion": "inlier_consensus",
         "reason": "Inlier count (5 < 20) or ratio (1.2% < 15.0%); Ill-conditioned transform: cond(H) = 2.4e+06 > 1.0e+05; Unphysical rotation: |-151.2\u00b0| > 30.0\u00b0"
       },
+      "gate_ablation": {
+        "rule_disabled": "inlier_consensus",
+        "is_gated": true,
+        "status": "GATED",
+        "first_failing_criterion": "conditioning",
+        "reasons": [
+          "Ill-conditioned transform: cond(H) = 2.4e+06 > 1.0e+05",
+          "Unphysical rotation: |-151.2\u00b0| > 30.0\u00b0"
+        ]
+      },
       "rmse_px": 5.339111290971098,
       "rmse_metres": 25.200605293383582,
       "max_residual_px": 7.399414539337158,
@@ -297,6 +307,13 @@
         "reasons": [],
         "first_failing_criterion": null,
         "reason": "Meets flight safety requirements"
+      },
+      "gate_ablation": {
+        "rule_disabled": "inlier_consensus",
+        "is_gated": false,
+        "status": "PASSED",
+        "first_failing_criterion": null,
+        "reasons": []
       },
       "rmse_px": 9.231547672860575,
       "rmse_metres": 43.57290501590191,
@@ -563,6 +580,17 @@
         "first_failing_criterion": "inlier_consensus",
         "reason": "Inlier count (6 < 20) or ratio (2.2% < 15.0%); Ill-conditioned transform: cond(H) = 3.5e+05 > 1.0e+05; Unphysical rotation: |64.2\u00b0| > 30.0\u00b0; Unphysical scale: recovered 0.4210 diverges by 57.9% (> 25.0%) from expected 1.0000"
       },
+      "gate_ablation": {
+        "rule_disabled": "inlier_consensus",
+        "is_gated": true,
+        "status": "GATED",
+        "first_failing_criterion": "conditioning",
+        "reasons": [
+          "Ill-conditioned transform: cond(H) = 3.5e+05 > 1.0e+05",
+          "Unphysical rotation: |64.2\u00b0| > 30.0\u00b0",
+          "Unphysical scale: recovered 0.4210 diverges by 57.9% (> 25.0%) from expected 1.0000"
+        ]
+      },
       "rmse_px": 4.541350322074926,
       "rmse_metres": 310.53753502348343,
       "max_residual_px": 6.514965057373047,
@@ -822,6 +850,13 @@
         "reasons": [],
         "first_failing_criterion": null,
         "reason": "Meets flight safety requirements"
+      },
+      "gate_ablation": {
+        "rule_disabled": "inlier_consensus",
+        "is_gated": false,
+        "status": "PASSED",
+        "first_failing_criterion": null,
+        "reasons": []
       },
       "rmse_px": 9.045121108387285,
       "rmse_metres": 618.5053813915225,

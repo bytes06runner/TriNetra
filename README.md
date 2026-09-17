@@ -119,6 +119,8 @@ TriNetra exports comprehensive per-hop tie points and consensus inliers under Lu
 
 ## 3. Evaluation Metrics
 
+> **Disclosure:** Both crops were independently decimated to a common canvas size before matching, which absorbs the nominal 18.15x and 14.49x sensor GSD ratios. Recovered scale therefore measures residual footprint mismatch between crops, not the raw inter-sensor ratio. The matching problem solved here is illumination and modality invariance at matched ground sampling, not scale-invariant matching across raw resolutions.
+
 Sub-pixel accuracy (RMSE < 1 px) is NOT achieved on either hop.
 Hop 1: RMSE 9.23 px at TMC-2 GSD 4.72 m/px = 43.6 m.
 Hop 2: RMSE 9.05 px at IIRS GSD 68.38 m/px = 618.5 m.
@@ -130,6 +132,8 @@ Comprehensive scorecards, threshold stability sweeps, and multi-hop error propag
 
 ### Measured Flight Scorecard (Problem Statement Deliverable 3)
 
+*Note: Scale and rotation parameters are estimated in pre-scaled canvas space (1000×1000 for Hop 1, 800×800 for Hop 2), not raw sensor space.*
+
 | Metric | Hop 1: Baseline SIFT | Hop 1: Fine-Tuned LoFTR | Hop 2: Baseline SIFT | Hop 2: Phase Congruency + LoFTR |
 |:---|:---:|:---:|:---:|:---:|
 | **Sensor Pair** | OHRC ↔ TMC-2 | OHRC ↔ TMC-2 | TMC-2 ↔ IIRS | TMC-2 ↔ IIRS |
@@ -139,7 +143,7 @@ Comprehensive scorecards, threshold stability sweeps, and multi-hop error propag
 | **Inlier Threshold (px)** | 15.0 px | 15.0 px | 15.0 px | 15.0 px |
 | **Inlier Threshold (m)** | 70.8 m | 70.8 m | 1025.7 m | 1025.7 m |
 | **Inlier Ratio (%)** | 1.22% | **22.58%** | 2.21% | **40.39%** |
-| **Flight Gate Status** | 🛑 GATED (<15% & <20) | ✅ **CLEARED** | 🛑 GATED (<15% & <20) | ✅ **CLEARED** |
+| **Flight Gate Status** | GATED (<15% & <20) | **PASS** | GATED (<15% & <20) | **PASS** |
 | **Reprojection RMSE (px)** | 5.34 px | 9.23 px | 4.54 px | 9.05 px |
 | **Reprojection RMSE (m)** | 25.2 m | 43.6 m | 310.5 m | 618.5 m |
 | **Sub-Pixel Achieved?** | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) |

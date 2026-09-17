@@ -54,15 +54,24 @@ def evaluate_flight_gate(
     total_matches: int,
     inlier_ratio_pct: Optional[float] = None,
     H: Optional[np.ndarray] = None,
-    expected_scale: Optional[float] = None,
+    expected_scale: Optional[float] = 1.0,
     max_rotation_deg: float = 30.0,
     scale_tolerance: float = 0.25,
     cond_thresh: float = 1e5,
+    ignore_consensus: bool = False,
 ) -> dict:
     """Evaluate whether a correspondence set satisfies spaceflight safety gates.
 
+    Expected Scale Note:
+        expected_scale defaults to 1.0 because input crops are independently
+        pre-scaled / decimated to a common standardized display canvas (e.g.
+        1000x1000 for Hop 1, 800x800 for Hop 2). This pre-scaling absorbs the raw
+        instrument GSD gaps (18.15x for Hop 1, 14.49x for Hop 2) at crop extraction
+        time, so a valid geometric solution in canvas space expects a residual scale
+        factor near 1.0 (within scale_tolerance = 25%).
+
     Flight Safety Rules (evaluated in order):
-        1. Inlier Consensus Rule:
+        1. Inlier Consensus Rule (unless ignore_consensus=True):
            inliers < 20  OR  inlier_ratio_pct < 15.0%.
         2. Matrix Conditioning Rule:
            cond(H) > 1e5 (ill-conditioned fit prone to numerical instability).
@@ -79,11 +88,12 @@ def evaluate_flight_gate(
     reasons = []
     first_failing_criterion = None
 
-    # Criterion 1: Inlier consensus floor
-    if inliers < 20 or inlier_ratio_pct < 15.0:
-        reasons.append(f"Inlier count ({inliers} < 20) or ratio ({inlier_ratio_pct:.1f}% < 15.0%)")
-        if first_failing_criterion is None:
-            first_failing_criterion = "inlier_consensus"
+    # Criterion 1: Inlier consensus floor (evaluated unless ablated)
+    if not ignore_consensus:
+        if inliers < 20 or inlier_ratio_pct < 15.0:
+            reasons.append(f"Inlier count ({inliers} < 20) or ratio ({inlier_ratio_pct:.1f}% < 15.0%)")
+            if first_failing_criterion is None:
+                first_failing_criterion = "inlier_consensus"
 
     cond_val = None
     scale_val = None

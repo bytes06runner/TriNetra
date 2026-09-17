@@ -515,6 +515,20 @@ def evaluate_hop(
         cond_thresh=1e5,
     )
 
+    # Gate ablation (G2): inlier_consensus rule DISABLED to test whether
+    # conditioning and plausibility rules independently catch degenerate fits
+    gate_ablation_eval = evaluate_flight_gate(
+        inliers=inlier_count,
+        total_matches=total_matches,
+        inlier_ratio_pct=inlier_ratio,
+        H=H,
+        expected_scale=1.0,
+        max_rotation_deg=30.0,
+        scale_tolerance=0.25,
+        cond_thresh=1e5,
+        ignore_consensus=True,
+    )
+
     thresh_m = float(inlier_threshold_px * ref_gsd)
 
     result = {
@@ -526,6 +540,13 @@ def evaluate_hop(
         "inlier_threshold_px": float(inlier_threshold_px),
         "inlier_threshold_metres": thresh_m,
         "flight_gate": gate_eval,
+        "gate_ablation": {
+            "rule_disabled": "inlier_consensus",
+            "is_gated": gate_ablation_eval["is_gated"],
+            "status": gate_ablation_eval["status"],
+            "first_failing_criterion": gate_ablation_eval["first_failing_criterion"],
+            "reasons": gate_ablation_eval["reasons"],
+        },
         "rmse_px": rmse_px,
         "rmse_metres": rmse_metres,
         "max_residual_px": max_residual_px,
@@ -1128,6 +1149,8 @@ def generate_metrics_md(metrics: Dict[str, Any], path: Path) -> None:
     lines = [
         "# TriNetra Evaluation Metrics Scorecard (ISRO SIH26166)",
         "",
+        "> **Disclosure:** Both crops were independently decimated to a common canvas size before matching, which absorbs the nominal 18.15x and 14.49x sensor GSD ratios. Recovered scale therefore measures residual footprint mismatch between crops, not the raw inter-sensor ratio. The matching problem solved here is illumination and modality invariance at matched ground sampling, not scale-invariant matching across raw resolutions.",
+        "",
         "> **Notice:** All metrics are empirically measured from authentic Chandrayaan-2 flight crops at Shiv Shakti Point (-69.58°S) and South Pole (-70.85°S).",
         "> Deterministic seed: `42`. Lunar radius: `1,737,400 m`. RANSAC inlier threshold: `15.0 px`.",
         "",
@@ -1145,7 +1168,7 @@ def generate_metrics_md(metrics: Dict[str, Any], path: Path) -> None:
         f"| **Inlier Threshold (m)** | {h1_sift['inlier_threshold_metres']:.1f} m | {h1_ft['inlier_threshold_metres']:.1f} m | {h2_sift['inlier_threshold_metres']:.1f} m | {h2_pc['inlier_threshold_metres']:.1f} m |",
         f"| **Inlier Ratio (RANSAC)** | {h1_sift['inlier_ratio']:.2f}% | **{h1_ft['inlier_ratio']:.2f}%** | {h2_sift['inlier_ratio']:.2f}% | **{h2_pc['inlier_ratio']:.2f}%** |",
         f"| **Matches Strictly ≤ 15.0 px** | {h1_sift['hard_15px_inliers']} ({h1_sift['hard_15px_ratio']:.2f}%) | **{h1_ft['hard_15px_inliers']} ({h1_ft['hard_15px_ratio']:.2f}%)** [^1] | {h2_sift['hard_15px_inliers']} ({h2_sift['hard_15px_ratio']:.2f}%) | **{h2_pc['hard_15px_inliers']} ({h2_pc['hard_15px_ratio']:.2f}%)** [^1] |",
-        f"| **Flight Gate Status (F4)** | 🛑 **GATED** ({h1_sift['flight_gate']['first_failing_criterion']}) | ✅ **PASSED** (all criteria) | 🛑 **GATED** ({h2_sift['flight_gate']['first_failing_criterion']}) | ✅ **PASSED** (all criteria) |",
+        f"| **Flight Gate Status (F4)** | GATED ({h1_sift['flight_gate']['first_failing_criterion']}) | PASS (all criteria) | GATED ({h2_sift['flight_gate']['first_failing_criterion']}) | PASS (all criteria) |",
         f"| **Reprojection RMSE (px)** | {h1_sift['rmse_px']:.2f} px | {h1_ft['rmse_px']:.2f} px | {h2_sift['rmse_px']:.2f} px | {h2_pc['rmse_px']:.2f} px |",
         f"| **Reprojection RMSE (m)** | {h1_sift['rmse_metres']:.1f} m | {h1_ft['rmse_metres']:.1f} m | {h2_sift['rmse_metres']:.1f} m | {h2_pc['rmse_metres']:.1f} m |",
         f"| **Cached RMSE Cross-Check** | {h1_sift['cached_reproj_rmse']:.4f} (Δ={h1_sift['rmse_cross_check_diff']:.5f}) | {h1_ft['cached_reproj_rmse']:.2f} (Δ={h1_ft['rmse_cross_check_diff']:.5f}) | {h2_sift['cached_reproj_rmse']:.4f} (Δ={h2_sift['rmse_cross_check_diff']:.5f}) | {h2_pc['cached_reproj_rmse']:.2f} (Δ={h2_pc['rmse_cross_check_diff']:.5f}) |",
@@ -1212,7 +1235,7 @@ def generate_metrics_md(metrics: Dict[str, Any], path: Path) -> None:
         "",
         "## 3. Residual vs Terrain Slope Analysis (F3)",
         "",
-        "We empirically tested whether reprojection residuals correlate with non-rigid lunar crater-rim parallax by sampling the LOLA south polar DEM (`south_pole_subset.tif`) at every inlier match coordinate:",
+        "We empirically tested whether reprojection residuals correlate with local terrain slope by sampling the LOLA south polar DEM (`south_pole_subset.tif`) at every inlier match coordinate:",
         "",
         "| Configuration | Inliers Evaluated (n) | Pearson r (Residual vs Slope) | p-value (Pearson) | Spearman ρ (Residual vs Slope) | p-value (Spearman) | Pearson r (vs |Elev - Mean|) | Spearman ρ (vs |Elev - Mean|) |",
         "|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
@@ -1233,8 +1256,7 @@ def generate_metrics_md(metrics: Dict[str, Any], path: Path) -> None:
 
     lines.extend([
         "",
-        "> **Scientific Finding:** The measured correlation between reprojection residual and local terrain slope is weakly positive ($r = +0.151, p = 0.301$ for Hop 1; $r = +0.125, p = 0.166$ for Hop 2) but is **not statistically significant** at $\\alpha = 0.05$.",
-        "> The hypothesis that reprojection residuals are primarily driven by local terrain slope is **unproven** on these crops. Residuals reflect a combined error budget including sensor optical point-spread blur across the large scale gap, unmodeled camera distortion, and sub-pixel localization uncertainty rather than simple terrain parallax alone.",
+        "> **Scientific Finding:** Residuals are not explained by local terrain slope in our measurements (r = +0.151, p = 0.301 Hop 1; r = +0.125, p = 0.166 Hop 2). The error budget is unresolved and likely combines point-spread blur across the scale gap, unmodelled lens distortion, and keypoint localisation uncertainty.",
         "",
         "---",
         "",
@@ -1248,9 +1270,14 @@ def generate_metrics_md(metrics: Dict[str, Any], path: Path) -> None:
         "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
     ])
 
-    for row in h1_ft["threshold_sweep"]:
+    for s in h1_ft["threshold_sweep"]:
+        obs_m = f"{s['ratio_within_gate']:.2f}%"
+        fit_rmse_px = f"{s['rmse_of_matches_within_gate_px']:.3f} px"
+        fit_rmse_m = f"{s['rmse_of_matches_within_gate_m']:.1f} m"
+        exp_matches = f"{s['uniform_random_expected']:.2f}"
+        ratio_str = f"{s['observed_over_expected_ratio']:.2f}x" if s['observed_over_expected_ratio'] is not None else "—"
         lines.append(
-            f"| {row['gate_px']:.1f} px | {row['gate_m']:.1f} m | {row['n_within_gate']} / {row['total_matches']} | {row['ratio_within_gate']:.2f}% | {row['rmse_of_matches_within_gate_px']:.3f} px | {row['rmse_of_matches_within_gate_m']:.1f} m | {row['uniform_random_expected']:.2f} | {row['observed_over_expected_ratio']:.2f}x |"
+            f"| {s['gate_px']:.1f} px | {s['gate_m']:.1f} m | {s['n_within_gate']} / {h1_ft['total_matches']} | {obs_m} | {fit_rmse_px} | {fit_rmse_m} | {exp_matches} | {ratio_str} |"
         )
 
     lines.extend([
@@ -1261,40 +1288,45 @@ def generate_metrics_md(metrics: Dict[str, Any], path: Path) -> None:
         "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
     ])
 
-    for row in h2_pc["threshold_sweep"]:
+    for s in h2_pc["threshold_sweep"]:
+        obs_m = f"{s['ratio_within_gate']:.2f}%"
+        fit_rmse_px = f"{s['rmse_of_matches_within_gate_px']:.3f} px"
+        fit_rmse_m = f"{s['rmse_of_matches_within_gate_m']:.1f} m"
+        exp_matches = f"{s['uniform_random_expected']:.2f}"
+        ratio_str = f"{s['observed_over_expected_ratio']:.2f}x" if s['observed_over_expected_ratio'] is not None else "—"
         lines.append(
-            f"| {row['gate_px']:.1f} px | {row['gate_m']:.1f} m | {row['n_within_gate']} / {row['total_matches']} | {row['ratio_within_gate']:.2f}% | {row['rmse_of_matches_within_gate_px']:.3f} px | {row['rmse_of_matches_within_gate_m']:.1f} m | {row['uniform_random_expected']:.2f} | {row['observed_over_expected_ratio']:.2f}x |"
+            f"| {s['gate_px']:.1f} px | {s['gate_m']:.1f} m | {s['n_within_gate']} / {h2_pc['total_matches']} | {obs_m} | {fit_rmse_px} | {fit_rmse_m} | {exp_matches} | {ratio_str} |"
         )
 
     lines.extend([
         "",
         "---",
         "",
-        "## 5. End-to-End Multi-Hop Transformation Chain",
+        "## 5. Multi-Hop Transform Composition (OHRC → TMC-2 → IIRS)",
         "",
-        "Composed mapping: $\\mathbf{H}_{\\text{OHRC} \\to \\text{IIRS}} = \\mathbf{H}_{\\text{TMC-2} \\to \\text{IIRS}} \\cdot \\mathbf{H}_{\\text{OHRC} \\to \\text{TMC-2}}$",
-        "",
+        "- **Composed Transform Matrix:** $\\mathbf{H}_{\\text{OHRC} \\to \\text{IIRS}} = \\mathbf{H}_{\\text{TMC-2} \\to \\text{IIRS}} \\cdot \\mathbf{H}_{\\text{OHRC} \\to \\text{TMC-2}}$",
         f"- **Composed Scale Factor:** `{mh['transform_params']['scale']:.4f}`",
         f"- **Composed Rotation:** `{mh['transform_params']['rotation_deg']:.2f}°`",
-        f"- **Composed Translation:** `(tx={mh['transform_params']['translation_x']:.2f}, ty={mh['transform_params']['translation_y']:.2f})`",
-        f"- **Matrix Condition Number:** `{mh['condition_number']:.1f}`",
-        f"- **Composed RMSE (Error Propagation):** `{mh['composed_rmse_px']:.2f} px` (`{mh['composed_rmse_metres']:.1f} m` at IIRS GSD {mh['target_sensor_gsd_m']} m/px)",
-        f"- **Sub-Pixel Achieved?** **No** (`{mh['composed_rmse_px']:.2f} px >= 1.0 px`)",
-        "",
-        f"> **Scientific Caveat:** *{mh['scientific_caveat']}*",
+        f"- **Composed Translation:** `({mh['transform_params']['translation_x']:.1f}, {mh['transform_params']['translation_y']:.1f})`",
+        f"- **Condition Number:** `{mh['condition_number']:.1f}`",
+        f"- **Linear Error Propagation RMSE (px):** `{mh['composed_rmse_px']:.2f} px`",
+        f"- **Linear Error Propagation RMSE (m):** `{mh['composed_rmse_metres']:.1f} m` (at IIRS GSD 68.38 m/px)",
+        f"- **Scientific Caveat:** *{mh['scientific_caveat']}*",
         "",
         "---",
         "",
-        "## 6. Technical Provenance & Pre-Alignment Audit (F1 & A3/A4)",
+        "## 6. Physical Specifications & Ground Conversions (F7)",
         "",
-        "### Pre-Alignment Audit (F1 Findings)",
-        "- **Independent Slicing:** Source and reference crops were independently sliced from their respective PDS4 unprojected image arrays (`scripts/align_real_tmc_ohrc.py` lines 27-44; `scripts/align_real_tmc_iirs.py` lines 41-60).",
-        "- **Canvas Normalization:** Both crops were pre-scaled to a common pixel canvas (`1000×1000` for Hop 1, `800×800` for Hop 2) via `cv2.resize()`. This explains why the recovered scale factors are near-identity (~1.009 and ~1.058) rather than the raw sensor GSD ratios (18.15× and 14.49×).",
-        "- **No Prior Orthorectification:** The SLDEM2015 DEM was not used to orthorectify flight crops before matching.",
-        "- **Rotation Recovery:** Relative rotation was NOT pre-aligned. Both sensors shared nominal south-polar flight tracks, and the fine-tuned matcher accurately recovered the small residual trajectory orientation (-4.38° for Hop 1, -0.34° for Hop 2), while classical SIFT degenerated to unphysical rotations (-151.15° and +64.19°).",
+        "### Lunar Coordinate Header & Planet Constant (A1)",
+        "Every match point CSV and GeoJSON contains the exact IAU lunar physical model coordinate header:",
+        "```text",
+        "# Local planar approximation about anchor (lat, lon). Lunar radius 1737400 m. Valid only within this crop. Not geodetic coordinates.",
+        "```",
+        f"- **Lunar Mean Radius:** `R = 1,737,400.0 m`",
+        f"- **Metres Per Degree Latitude:** `π × 1737400 / 180 = 30,323.35 m/deg`",
+        f"- **Metres Per Degree Longitude:** `30,323.35 × cos(latitude) m/deg`",
         "",
-        "### RANSAC Threshold Provenance (A3)",
-        "- **Threshold:** `15.0 px` explicitly configured across all registration modules.",
+        "### Physical Meaning of the 15.0 px RANSAC Gate (F7b)",
         f"- **Ground Metric at Hop 1 (TMC-2 4.72 m/px):** `15.0 px × 4.72 m/px = 70.80 m`.",
         f"- **Ground Metric at Hop 2 (IIRS 68.38 m/px):** `15.0 px × 68.38 m/px = 1,025.70 m`.",
         "",
@@ -1313,7 +1345,6 @@ def generate_results_md(metrics: Dict[str, Any], path: Path) -> None:
     h1_ft = metrics["hop1_finetuned"]
     h2_sift = metrics["hop2_sift"]
     h2_pc = metrics["hop2_pc"]
-    sl_corr = metrics.get("terrain_slope_correlations", {})
 
     lines = [
         "# TriNetra (त्रिनेत्र) — Reviewer Executive Summary",
@@ -1324,21 +1355,26 @@ def generate_results_md(metrics: Dict[str, Any], path: Path) -> None:
         "",
         "## 1. Measured Observation Datasets",
         "",
+        "> **Read this first:** Both crops were independently decimated to a common canvas size before matching, which absorbs the nominal 18.15x and 14.49x sensor GSD ratios. Recovered scale therefore measures residual footprint mismatch between crops, not the raw inter-sensor ratio. The matching problem solved here is illumination and modality invariance at matched ground sampling, not scale-invariant matching across raw resolutions.",
+        "",
         "All measurements were conducted on authentic Chandrayaan-2 PDS4 flight products downloaded from the ISSDC repository:",
-        "- **OHRC (0.26 m/px):** `ch2_ohr_ncp_20211023T0027462822_d_img_d18` (Lines 10000:14000, Samples 4000:8000; Center: -69.58019°S, 32.28800°E).",
-        "- **TMC-2 (4.72 m/px):** `ch2_tmc_ncn_20230130T1900132182_d_img_d32` (South Pole nadir track; Center: -69.57911°S, 32.27507°E and -70.85000°S, 32.26000°E).",
-        "- **IIRS (68.38 m/px):** `ch2_iir_nri_20231003T2152304115_d_img_d18` (Raw Level-1 hyperspectral cube, Lines 510:630, Samples 60:180; Center: -70.85000°S, 32.26000°E).",
+        "- **OHRC (0.26 m/px):** `ch2_ohr_ncp_20211023T0027462822_d_img_d18` (Lines 10000:14000, Samples 4000:8000; Center: -69.58019°S, 32.28800°E; Sun Azimuth: 298.43°, Elevation: 9.13°, Roll: +15.76°).",
+        "- **TMC-2 (4.72 m/px):** `ch2_tmc_ncn_20230130T1900132182_d_img_d32` (South Pole nadir track; Center: -69.57911°S, 32.27507°E and -70.85000°S, 32.26000°E; Sun Azimuth: 53.02°, Elevation: 17.22°, Roll: -0.02°).",
+        "- **IIRS (68.38 m/px):** `ch2_iir_nri_20231003T2152304115_d_img_d18` (Raw Level-1 hyperspectral cube, Lines 510:630, Samples 60:180; Center: -70.85000°S, 32.26000°E; Sun Azimuth: 277.20°, Elevation: 2.29°).",
+        "- **Cross-Illumination Disparity:** The solar azimuth angle difference between OHRC (298.43°) and TMC-2 (53.02°) is **114.6°** ($360^\circ - (298.43^\circ - 53.02^\circ)$). The spacecraft roll offset is **15.8°**.",
         "",
         "---",
         "",
         "## 2. Transformation Conditioning & Plausibility",
         "",
+        "*Note: Scale and rotation parameters are estimated in pre-scaled canvas space (1000×1000 for Hop 1, 800×800 for Hop 2), not raw sensor space.*",
+        "",
         "| Configuration | Inliers (RANSAC) | Inliers (≤15px) | Recovered Scale | Recovered Rotation | Condition Number | Validity Gate Status | First Failing Criterion |",
         "|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
-        f"| **Hop 1: Baseline SIFT** | {h1_sift['inlier_count']} / 409 | {h1_sift['hard_15px_inliers']} / 409 | {h1_sift['transform_params']['scale']:.4f} | {h1_sift['transform_params']['rotation_deg']:+.2f}° | {h1_sift['condition_number']:.1f} | 🛑 **GATED** | {h1_sift['flight_gate']['first_failing_criterion']} |",
-        f"| **Hop 1: Fine-Tuned LoFTR** | **{h1_ft['inlier_count']} / 217** | **{h1_ft['hard_15px_inliers']} / 217** | **{h1_ft['transform_params']['scale']:.4f}** | **{h1_ft['transform_params']['rotation_deg']:+.2f}°** | **{h1_ft['condition_number']:.1f}** | ✅ **PASSED** | None (All passed) |",
-        f"| **Hop 2: Baseline SIFT** | {h2_sift['inlier_count']} / 272 | {h2_sift['hard_15px_inliers']} / 272 | {h2_sift['transform_params']['scale']:.4f} | {h2_sift['transform_params']['rotation_deg']:+.2f}° | {h2_sift['condition_number']:.1f} | 🛑 **GATED** | {h2_sift['flight_gate']['first_failing_criterion']} |",
-        f"| **Hop 2: Phase Congruency + LoFTR** | **{h2_pc['inlier_count']} / 307** | **{h2_pc['hard_15px_inliers']} / 307** | **{h2_pc['transform_params']['scale']:.4f}** | **{h2_pc['transform_params']['rotation_deg']:+.2f}°** | **{h2_pc['condition_number']:.1f}** | ✅ **PASSED** | None (All passed) |",
+        f"| **Hop 1: Baseline SIFT** | {h1_sift['inlier_count']} / 409 | {h1_sift['hard_15px_inliers']} / 409 | {h1_sift['transform_params']['scale']:.4f} | {h1_sift['transform_params']['rotation_deg']:+.2f}° | {h1_sift['condition_number']:.1f} | **GATED** | {h1_sift['flight_gate']['first_failing_criterion']} |",
+        f"| **Hop 1: Fine-Tuned LoFTR** | **{h1_ft['inlier_count']} / 217** | **{h1_ft['hard_15px_inliers']} / 217** | **{h1_ft['transform_params']['scale']:.4f}** | **{h1_ft['transform_params']['rotation_deg']:+.2f}°** | **{h1_ft['condition_number']:.1f}** | **PASS** | None (All passed) |",
+        f"| **Hop 2: Baseline SIFT** | {h2_sift['inlier_count']} / 272 | {h2_sift['hard_15px_inliers']} / 272 | {h2_sift['transform_params']['scale']:.4f} | {h2_sift['transform_params']['rotation_deg']:+.2f}° | {h2_sift['condition_number']:.1f} | **GATED** | {h2_sift['flight_gate']['first_failing_criterion']} |",
+        f"| **Hop 2: Phase Congruency + LoFTR** | **{h2_pc['inlier_count']} / 307** | **{h2_pc['hard_15px_inliers']} / 307** | **{h2_pc['transform_params']['scale']:.4f}** | **{h2_pc['transform_params']['rotation_deg']:+.2f}°** | **{h2_pc['condition_number']:.1f}** | **PASS** | None (All passed) |",
         "",
         "---",
         "",
@@ -1360,13 +1396,15 @@ def generate_results_md(metrics: Dict[str, Any], path: Path) -> None:
         "",
         "---",
         "",
-        "## 5. Spaceflight Validity Gate Rejections",
+        "## 5. Spaceflight Validity Gate & Ablation Analysis",
         "",
         "The spaceflight validity gate evaluated three sequential rules:",
         "1. **Inlier consensus floor:** inliers ≥ 20 AND ratio ≥ 15.0%.",
         "2. **Numerical stability:** condition number cond(H) ≤ 100,000.",
-        "3. **Physical plausibility:** |rotation| ≤ 30.0° AND scale error ≤ 25.0%.",
+        "3. **Physical plausibility:** |rotation| ≤ 30.0° AND scale error ≤ 25.0% relative to expected canvas scale 1.0.",
         "",
+        "- **Expected Scale Setting:** The expected scale in the physical plausibility rule is set to 1.0 because both crops were pre-scaled to a common canvas size before matching. Any fitted scale factor diverging by >25% from 1.0 in canvas space indicates unphysical geometric distortion.",
+        "- **Ablation Finding (G2):** The gate catches degenerate geometry independently of match count: when the inlier consensus rule is disabled in ablation, both SIFT runs are still rejected by the conditioning rule alone (Hop 1 cond = 2.4e+06, Hop 2 cond = 3.5e+05, threshold 1.0e+05), while both passing runs remain valid.",
         "- **Hop 1 SIFT Rejection:** Failed on inlier consensus (5 < 20, 1.2% < 15%), ill-conditioning ($cond = 2.4\\times 10^6$), and unphysical rotation ($-151.15^\\circ$).",
         "- **Hop 2 SIFT Rejection:** Failed on inlier consensus (6 < 20, 2.2% < 15%), ill-conditioning ($cond = 3.5\\times 10^5$), unphysical rotation ($+64.19^\\circ$), and scale collapse ($0.4210$, 57.9% error).",
         "",
@@ -1375,8 +1413,8 @@ def generate_results_md(metrics: Dict[str, Any], path: Path) -> None:
         "## 6. Known Limitations",
         "",
         "1. **Gate Width in Ground Distance:** The 15.0 px RANSAC threshold corresponds to **70.80 m** on Hop 1 (TMC-2 GSD 4.72 m/px) and **1,025.70 m** on Hop 2 (IIRS GSD 68.38 m/px). Tightening the gate to 5.0 px (23.6 m on Hop 1, 341.9 m on Hop 2) reduces inliers to 10 on Hop 1 and 24 on Hop 2.",
-        "2. **Terrain Slope Correlation (F3 Result):** Reprojection residuals show only a weak, statistically non-significant correlation with LOLA DEM terrain slope ($r = +0.151, p = 0.301$ on Hop 1; $r = +0.125, p = 0.166$ on Hop 2). The hypothesis that residual error is purely topographic parallax is unproven.",
-        "3. **Pre-Scaling Context:** Because crops were pre-scaled to standard display canvas sizes (1000×1000 and 800×800) before matching, the recovered scale reflects residual scale differences between crops (~1.01 and ~1.06), not the unnormalized raw GSD ratios.",
+        "2. **Terrain Slope Correlation & Roadmap Justification:** Residuals are not explained by local terrain slope in our measurements ($r = +0.151, p = 0.301$ on Hop 1; $r = +0.125, p = 0.166$ on Hop 2). The error budget is unresolved and likely combines point-spread blur across the scale gap, unmodelled lens distortion, and keypoint localisation uncertainty. Because slope does not explain residual magnitude, the empirical justification for the Thin-Plate Spline (TPS) non-rigid refinement roadmap item is weakened.",
+        "3. **Residual Scale Gap:** On Hop 1, the fitted scale is 1.0086 (residual gap of 0.0674 / 6.74% relative to polar footprint ratio 0.9412, or 0.0086 / 0.86% relative to unit canvas). On Hop 2, the fitted scale is 1.0580 compared to the expected canvas footprint ratio of 0.9997 (8203.36 m / 8205.60 m); this 0.0583 (5.83%) residual scale gap is unexplained.",
     ]
 
     with open(path, "w", encoding="utf-8") as f:
