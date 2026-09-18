@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/ISRO-Chandrayaan--2-FF9933" alt="ISRO Chandrayaan-2"/>
   <img src="https://img.shields.io/badge/6--Criterion%20Gate-GATED%20(Shuffle%20Invariance)-red" alt="6-Criterion Gate Status"/>
   <img src="https://img.shields.io/badge/5--Criterion%20Gate-PASS%20(Superseded)-yellow" alt="5-Criterion Gate Status"/>
-  <img src="https://img.shields.io/badge/Test%20Suite-141%2F141%20Passed-brightgreen" alt="Tests"/>
+  <img src="https://img.shields.io/badge/Test%20Suite-144%2F144%20Passed-brightgreen" alt="Tests"/>
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License"/>
 </p>
 
@@ -44,6 +44,7 @@
 - [RoPE & Native Resolution Diagnostic Benchmark](#-rope--native-resolution-diagnostic-benchmark)
 - [The Domain-Adapted Fine-Tuning Breakthrough (Hop 1)](#-the-domain-adapted-fine-tuning-breakthrough-hop-1)
 - [Hop 2 Cross-Modal Breakthrough (Phase Congruency & Domain Transfer)](#-hop-2-cross-modal-breakthrough-phase-congruency--domain-transfer)
+- [Stages J–M: LOLA Ground Truth Benchmark & Sub-Pixel Validation](#-stages-jm-lola-ground-truth-benchmark--sub-pixel-validation)
 - [Pipeline Modules Deep Dive](#-pipeline-modules-deep-dive)
 - [Interactive Mission-Control Web Dashboard](#-interactive-mission-control-web-dashboard)
 - [Installation, Local Setup & Reproduction Guide](#-installation-local-setup--reproduction-guide)
@@ -435,6 +436,85 @@ We evaluated principled algorithmic avenues on authentic Chandrayaan-2 South Pol
 
 ---
 
+## 🎯 Stages J–M: LOLA Ground Truth Benchmark & Sub-Pixel Validation
+
+To evaluate dense correspondence against geodetic ground truth and isolate the true physical bottlenecks of cross-sensor lunar registration, Stages J through M benchmarked dense grid correlation against an external LOLA-controlled reference product.
+
+### Geodetic Reference Provenance (Pitiscus Lobate Scarp)
+- **Site:** Pitiscus Lobate Scarp ($-51.25^\circ\text{ S}$, $31.25^\circ\text{ E}$)
+- **Reference Product:** LROC NAC DTM Orthophoto (`NAC_DTM_PITISCUS_M1149280834_2M.TIF`, GSD $2.00\text{ m/px}$)
+- **Target Product:** Chandrayaan-2 TMC-2 Calibrated Image (`ch2_tmc_ncn_20230130T1900132182_d_img_d32`, GSD $4.72\text{ m/px}$)
+- **Reference Georeferencing Provenance:** `lola_avg: 0.71 m`, `lola_rms: 0.92 m`, `adjust_rms: 0.75 m`, `relat_le: 1.079 m`, `triang_rms: 0.094`, 21 LOLA tracks, `conv_angle: 24.16 deg`.
+
+---
+
+### Stage J: Dense Correlation Benchmark & Failure Diagnosis
+Dense template correlation ($128\times 128$ search window, $64\times 64$ template) on an uncorrected common map grid yielded only $0.20\%$ node acceptance (2 of 1,024 nodes). Systematic diagnostic investigation revealed three distinct physical failure causes:
+1. **Pointing & Ephemeris Misalignment:** Measured a-priori offset between TMC-2 and the NAC reference was $\Delta x = -387.60\text{ m}$, $\Delta y = +1,057.49\text{ m}$ (total Euclidean shift: $1,126.29\text{ m} = 238.62\text{ px}$), placing true matches far outside standard search radii.
+2. **Solar Azimuth Separation ($78.32^\circ$):** TMC-2 sun azimuth ($60.87^\circ$, illumination from ENE) versus NAC sun azimuth ($342.55^\circ$, illumination from NNW) creates near-perpendicular shadow casting and slope shading inversion.
+3. **Crater Repetitive Self-Similarity:** Circular crater rims produce local correlation peaks on nearby, geometrically similar craters.
+
+Detailed findings: [`results/UPGRADE_J_DENSE.md`](results/UPGRADE_J_DENSE.md).
+
+---
+
+### Stage K: Coarse Alignment, Conforming Swath Grid & Phase Congruency
+Stage K implemented three targeted architectural enhancements:
+1. **Bulk Offset Compensation (K1):** The measured $1,126.29\text{ m}$ global vector was applied a-priori to re-center the search windows.
+2. **Conforming Swath Grid (K3):** Replaced rectangular grid with an interior $16 \times 70$ swath grid ($1,120$ nodes), dropping nodata boundary rejections from $38.9\%$ to $0.0\%$.
+3. **Illumination-Normalised Phase Congruency (K2):** Compared Raw NCC, Gradient Orientation, and Log-Gabor Phase Congruency ($M_{\max}$, 4 scales, 6 orientations). Phase congruency elevated node acceptance from $0.18\%$ to **$28.93\%$ (324 accepted nodes)** with mean peak correlation $0.4745$.
+
+#### Stage K Three-Arm Performance Benchmark
+
+| Representation Arm | Feature Extractor | Accepted Nodes | Acceptance Ratio | Mean Peak Correlation | Rejection: Below 0.40 Floor |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| Arm 1: Raw NCC | Standard cross-correlation | 2 / 1120 | 0.18% | 0.3115 | 886 / 1120 |
+| Arm 2: Phase Congruency | 4-scale, 6-orient Log-Gabor | 324 / 1120 | 28.93% | 0.4745 | 414 / 1120 |
+| Arm 3: Gradient Orientation | Unit gradient dot product | 0 / 1120 | 0.00% | 0.1356 | 1120 / 1120 |
+
+Two-sample Kolmogorov-Smirnov testing against uniform noise proved strong statistical separation ($D = 0.9982, p < 10^{-100}$). However, evaluating negative controls (rotations, flips, offsets) demonstrated that circular crater rims yield near-parity acceptance ($\Delta_{\text{shuffle}} = +0.54\%$), confirming that 1D peak correlation alone cannot filter out crater self-similarity under $78^\circ$ illumination shift.
+
+Detailed findings & deliverables: [`results/UPGRADE_K_COARSE_FINE.md`](results/UPGRADE_K_COARSE_FINE.md).  
+Artifacts: [`results/stage_k_accepted_nodes.csv`](results/stage_k_accepted_nodes.csv), [`results/stage_k_displacement_field.tif`](results/stage_k_displacement_field.tif), [`results/figures/stage_k_quiver_plot.png`](results/figures/stage_k_quiver_plot.png).
+
+---
+
+### Stage L: Vector Median Filtering & RANSAC Sweeps
+To resolve crater self-similarity, Stage L filtered candidate vectors by local neighborhood consensus:
+1. **Vector Field Median Filter (L1):** Computed deviations against the median of $k=8$ nearest neighbors. At threshold $3 \times \text{MAD} = 108.16\text{ m}$, 177 nodes were retained, reducing displacement RMSE from $122.53\text{ m}$ to $91.83\text{ m}$.
+2. **RANSAC Threshold Sweeps (L2):** Swept 4-DoF similarity consensus from $50\text{ m}$ down to $1\text{ m}$. At a $10\text{ m}$ threshold, genuine data produced 10 consensus inliers with reprojection RMSE of $5.13\text{ m}$ ($2.56$ reference px), tightly localized along the Pitiscus lobate scarp ridge.
+3. **Negative Control Confrontation (L3):** Identical RANSAC sweeps on negative controls (rotations, flips, offsets) produced 12–16 consensus inliers at $10\text{ m}$ tolerance ($\Delta_{\text{shuffle}} = -0.54\%$), proving that 2D geometric consensus on 200–300 candidate peaks finds chance combinations of crater rims when illumination is inverted.
+
+Detailed findings & deliverables: [`results/UPGRADE_L_GEOMETRIC_FILTER.md`](results/UPGRADE_L_GEOMETRIC_FILTER.md).  
+Artifacts: [`results/stage_l_inliers_10m.csv`](results/stage_l_inliers_10m.csv), [`results/stage_l_displacement_field_filtered.tif`](results/stage_l_displacement_field_filtered.tif), [`results/figures/stage_l_quiver_plot_filtered.png`](results/figures/stage_l_quiver_plot_filtered.png).
+
+---
+
+### Stage M: Sub-Pixel Validation Against Known Ground Truth
+To eliminate circularity and definitively verify the algorithmic capabilities of the phase congruency correlator:
+
+#### 1. Synthetic Sub-Pixel Shift Recovery (M1)
+Evaluated 100 sub-pixel translation pairs ($dx, dy \in [0.0, 0.9]\text{ px}$) generated via continuous Fourier phase multiplication on authentic Pitiscus NAC imagery ($2.00\text{ m/px}$):
+- **Mean Absolute Error (MAE):** $0.1057\text{ px}$ ($0.2114\text{ m}$)
+- **Root Mean Square Error (RMSE):** $0.1237\text{ px}$ ($0.2473\text{ m}$)
+- **Peak-Locking Bias:** Measured s-curve bias bounded by $\pm 0.0636\text{ px}$ ($0.1273\text{ m}$) at half-integer shifts.
+- **Noise Control:** On uniform random noise, the estimator collapsed to $\text{RMSE} = 27.80\text{ px}$ ($55.60\text{ m}$) with peak correlation at the noise floor ($0.0572$).
+
+#### 2. Recovery Across the $2.36\times$ Scale Gap (M2)
+Downsampled native NAC imagery to $4.72\text{ m/px}$ (matching TMC-2) and evaluated 25 known sub-pixel translations under the full Stage K pipeline:
+- **Mean Absolute Error (MAE):** $0.1978\text{ native reference px}$ ($0.3956\text{ m}$)
+- **Root Mean Square Error (RMSE):** $0.2091\text{ native reference px}$ ($0.4183\text{ m}$)
+- **Grid Acceptance:** **$100.0\%$ (64 / 64 nodes)** across all 25 trials under shared illumination.
+- **Controls:** Noise yielded $0.0\%$ acceptance; 180° rotation produced $52.5\text{ m}$ error ($125\times$ error margin).
+
+#### Core Diagnostic Conclusion
+Sub-pixel accuracy ($< 1.0\text{ px}$) is proven on real lunar terrain ($0.12\text{ px} = 0.25\text{ m}$ native; $0.21\text{ ref px} = 0.42\text{ m}$ across the scale gap). **The sensor resolution gap does not impede sub-meter registration.** The sole root cause of cross-sensor divergence is the $78.32^\circ$ solar illumination azimuth disparity combined with circular crater rim rotational symmetry.
+
+Detailed findings: [`results/UPGRADE_M_SUBPIXEL_TRUTH.md`](results/UPGRADE_M_SUBPIXEL_TRUTH.md).  
+Artifacts: [`results/figures/stage_m_peak_locking.png`](results/figures/stage_m_peak_locking.png).
+
+---
+
 ## 🔬 Pipeline Modules Deep Dive
 
 ### Module 1: Zero-Copy PDS4 Ingestion & Reflectance Extraction
@@ -568,10 +648,11 @@ TriNetra/
 │   │   ├── render_vs_real.png           # Stochastic sky-view render vs real OHRC flight crop
 │   │   ├── contact_sheet_20pairs.png    # 20-pair synthetic dataset sample
 │   │   └── azimuth_distribution.png     # ΔAzimuth coverage distribution
-│   └── real_cache/                      # Calibrated Chandrayaan-2 polar flight crops
+│   └── real_cache/                      # Calibrated Chandrayaan-2 polar flight crops & Stage J-M caches
 │       ├── polar_flight_hop1.npz        # Authentic OHRC ↔ TMC-2 polar evaluation pair
 │       ├── real_flight_hop1.npz         # Shackleton Rim Hop 1 pair (fine-tuned)
-│       └── real_flight_hop2.npz         # South Pole Hop 2 pair
+│       ├── real_flight_hop2.npz         # South Pole Hop 2 pair
+│       └── stage_{j,k,l,m}_results.json # Dense benchmark, filtering & synthetic validation caches
 │
 ├── kaggle/                              # Kaggle training & scaling pipeline
 │   └── train_eloftr_lunar.py            # Complete fine-tuning script with AMP & RoPE NPE
@@ -579,29 +660,49 @@ TriNetra/
 ├── models/                              # Model weight storage
 │   └── README.md                        # Checkpoint specifications & loading instructions
 │
+├── results/                             # Evaluation reports, scorecards & spatial deliverables
+│   ├── METRICS.md                       # Comprehensive evaluation metrics & methodology
+│   ├── RESULTS.md                       # One-page executive summary & scorecard
+│   ├── UPGRADE_J_DENSE.md               # Stage J: LOLA-controlled reference correlation report
+│   ├── UPGRADE_K_COARSE_FINE.md         # Stage K: Phase congruency & swath grid report
+│   ├── UPGRADE_L_GEOMETRIC_FILTER.md    # Stage L: Geometric consistency filtering report
+│   ├── UPGRADE_M_SUBPIXEL_TRUTH.md      # Stage M: Sub-pixel validation against known truth
+│   ├── figures/                         # Diagnostic figures, quiver plots, peak maps
+│   ├── matchpoints/                     # Inliers and matches (CSV & GeoJSON)
+│   └── stage_{k,l}_displacement_field*  # Registered GeoTIFFs, CSVs & GeoJSONs
+│
 ├── scripts/                             # Utility & evaluation scripts
 │   ├── baseline_zeroshot.py             # Reproducible 0/12 zero-shot baseline runner
 │   ├── verify_finetuned_checkpoint.py   # Deterministic fine-tuned checkpoint verifier
 │   ├── gen_illum_pairs.py               # Ray-marching synthetic dataset generator
-│   └── pack_for_kaggle.py               # Dataset sharding & SHA-256 packaging
+│   ├── pack_for_kaggle.py               # Dataset sharding & SHA-256 packaging
+│   ├── evaluate_stage_k.py              # Stage K coarse-to-fine phase congruency evaluator
+│   ├── evaluate_stage_l.py              # Stage L vector median & RANSAC filter evaluator
+│   ├── evaluate_stage_m.py              # Stage M synthetic sub-pixel known-truth validator
+│   ├── export_stage_k_deliverables.py   # GeoTIFF/CSV/GeoJSON exporter for Stage K
+│   └── export_stage_l_deliverables.py   # GeoTIFF/CSV/GeoJSON exporter for Stage L
 │
 ├── src/                                 # Core source code modules
 │   ├── illum_render.py                  # Ray-marching shadow casting & Lommel-Seeliger shading
 │   ├── pds_loader.py                    # Zero-copy memory-mapped PDS4 reader
 │   ├── geo_align.py                     # 3D Selenographic Cartesian KD-Tree geolocation
 │   ├── data_loader.py                   # PDS4 XML label parser & tile extractor
+│   ├── phase_congruency.py              # 2D Log-Gabor phase congruency feature extractor
 │   ├── module1_preprocessing/           # Shadow-aware CLAHE & sub-2000nm proxy extraction
 │   ├── module2_matching/                # Scale decimation & cross-sensor matching
 │   ├── module3_crater_verification/     # Multi-scale Hessian eigenvalue ridge filter (Sato)
 │   └── module4_registration/            # 4-DoF Similarity, MAGSAC++, & flight gate evaluator
 │
-├── tests/                               # Comprehensive automated test suite (136 tests)
+├── tests/                               # Comprehensive automated test suite (144 tests)
+│   ├── test_evaluate.py                 # Evaluation & spaceflight gate suite
 │   ├── test_illum_render.py             # Shading physics & stochastic ambient floor tests
 │   ├── test_pds_loader.py               # PDS4 zero-copy loader tests
 │   ├── test_module1.py                  # Radiometric preprocessing tests
 │   ├── test_module2.py                  # Scale decimation & matching tests
 │   ├── test_module3.py                  # Crater verification tests
-│   └── test_module4_5.py                # Geometric registration & gate tests
+│   ├── test_module4_5.py                # Geometric registration & gate tests
+│   ├── test_provenance.py               # Artifact and metric provenance tests
+│   └── test_subpixel_refiner.py         # Sub-pixel parabolic peak refiner tests
 │
 └── third_party/                         # Embedded dependencies
     └── EfficientLoFTR/                  # EfficientLoFTR backbone with patch for PyTorch 2.x

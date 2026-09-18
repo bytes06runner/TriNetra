@@ -1,0 +1,164 @@
+{
+  "grid_128": {
+    "accepted": 2,
+    "total": 1024,
+    "ratio_pct": 0.1953125,
+    "mean_peak": 0.2353913511491612,
+    "rejections": [
+      583,
+      166,
+      3,
+      270
+    ],
+    "nodes": [
+      {
+        "ix": 18,
+        "iy": 19,
+        "grid_x": 765,
+        "grid_y": 3553,
+        "dx_int": 9,
+        "dy_int": 26,
+        "dx_sub": 9.083193389849244,
+        "dy_sub": 25.977283388331823,
+        "peak": 0.4815559983253479,
+        "second_peak": 0.4296036958694458
+      },
+      {
+        "ix": 7,
+        "iy": 30,
+        "grid_x": 342,
+        "grid_y": 5567,
+        "dx_int": -29,
+        "dy_int": -6,
+        "dx_sub": -28.535417393484803,
+        "dy_sub": -6.417516919358588,
+        "peak": 0.4322108328342438,
+        "second_peak": 0.367854505777359
+      }
+    ]
+  },
+  "grid_256": {
+    "accepted": 2,
+    "total": 1024,
+    "ratio_pct": 0.1953125,
+    "mean_peak": 0.36305151077976916,
+    "rejections": [
+      296,
+      533,
+      1,
+      192
+    ],
+    "nodes": [
+      {
+        "ix": 30,
+        "iy": 1,
+        "grid_x": 1166,
+        "grid_y": 317,
+        "dx_int": -36,
+        "dy_int": 31,
+        "dx_sub": -35.94360011533206,
+        "dy_sub": 30.832023044741632,
+        "peak": 0.565687894821167,
+        "second_peak": 0.4929772913455963
+      },
+      {
+        "ix": 20,
+        "iy": 24,
+        "grid_x": 823,
+        "grid_y": 4434,
+        "dx_int": -70,
+        "dy_int": 54,
+        "dx_sub": -70.25228458534204,
+        "dy_sub": 53.61051490495921,
+        "peak": 0.5510320067405701,
+        "second_peak": 0.4942675828933716
+      }
+    ]
+  },
+  "controls_256": {
+    "rot90": {
+      "accepted": 0,
+      "total": 1024,
+      "ratio_pct": 0.0,
+      "mean_peak": 0.05920768965734169,
+      "rejections": [
+        85,
+        67,
+        1,
+        871
+      ]
+    },
+    "rot180": {
+      "accepted": 2,
+      "total": 1024,
+      "ratio_pct": 0.1953125,
+      "mean_peak": 0.35589287895709276,
+      "rejections": [
+        317,
+        511,
+        2,
+        192
+      ]
+    },
+    "rot270": {
+      "accepted": 0,
+      "total": 1024,
+      "ratio_pct": 0.0,
+      "mean_peak": 0.06278894128627144,
+      "rejections": [
+        65,
+        88,
+        0,
+        871
+      ]
+    },
+    "vflip": {
+      "accepted": 3,
+      "total": 1024,
+      "ratio_pct": 0.29296875,
+      "mean_peak": 0.3506970488379011,
+      "rejections": [
+        355,
+        472,
+        2,
+        192
+      ]
+    },
+    "hflip": {
+      "accepted": 0,
+      "total": 1024,
+      "ratio_pct": 0.0,
+      "mean_peak": 0.3486032881337451,
+      "rejections": [
+        342,
+        490,
+        0,
+        192
+      ]
+    },
+    "offset": {
+      "accepted": 2,
+      "total": 1024,
+      "ratio_pct": 0.1953125,
+      "mean_peak": 0.3566821049898863,
+      "rejections": [
+        340,
+        490,
+        0,
+        192
+      ]
+    },
+    "uniform_noise": {
+      "accepted": 0,
+      "total": 1024,
+      "ratio_pct": 0.0,
+      "mean_peak": 0.04826580997178098,
+      "rejections": [
+        832,
+        0,
+        0,
+        192
+      ]
+    }
+  }
+}
