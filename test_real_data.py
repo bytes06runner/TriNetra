@@ -49,7 +49,7 @@ def main() -> None:
 
     # ── 1. Load OHRC ────────────────────────────────────────────────
     print("=" * 60)
-    print("Loading OHRC (0.26 m/px, uint8, 93693 × 12000)...")
+    print("Loading OHRC (uint8, 93693 × 12000)...")
     ohrc = Chandrayaan2Loader(OHRC_IMG, OHRC_XML)
     print(f"  → {ohrc}")
     print(f"  → Metadata: sun_el={ohrc.meta.sun_elevation_deg}°, "
@@ -115,7 +115,7 @@ def main() -> None:
 
     axes[0].imshow(ohrc_result.image, cmap="gray", vmin=0, vmax=1)
     axes[0].set_title(
-        f"OHRC (0.26 m/px)\n"
+        f"OHRC\n"
         f"Sun El: {ohrc.meta.sun_elevation_deg:.1f}°  |  "
         f"Shadow: {ohrc_result.shadow_fraction:.0%}",
         fontsize=11, fontweight="bold",

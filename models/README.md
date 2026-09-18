@@ -22,9 +22,9 @@ Tested on confirmed overlapping flight crop (`assets/real_cache/polar_flight_hop
 - **Raw Feature Matches:** 217
 - **Consensus Inliers:** **49** (with deterministic `cv2.setRNGSeed(42)`)
 - **Inlier Consensus Ratio:** **22.58% (22.6%)**
-- **Reprojection RMSE:** ~5.1 px (~24 m ground error)
-- **Flight Gate Status:** **✅ CLEARED** (exceeds safety threshold of $\ge 20$ inliers and $\ge 15.0\%$ ratio)
-- *(Note: Initial unseeded exploratory run on Kaggle produced 53 inliers / 24.4% ratio; both pass the spaceflight safety gate).*
+- **Reprojection RMSE:** 9.23 c-px (2.22 native TMC-2 px, 9.42 m ground error)
+- **Flight Gate Status:** **GATED (6-Criterion)** under $\Delta_{\text{shuffle}} = -5.15\% < +15.0\%$ (Initial 5-criterion PASS superseded due to coordinate-grid bias under negative controls)
+- *(Note: Initial 5-criterion evaluation reported PASS with 49 inliers / 22.58% ratio; both Hop 1 and Hop 2 are gated under mandatory Criterion 6 shuffle invariance).*
 
 ### Overfitting Dynamics & Checkpoint Selection
 Validation was monitored against unseen DEM illumination pairs (`shard_14.npz`) and authentic flight crops across 17 epochs:

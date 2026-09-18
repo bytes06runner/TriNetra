@@ -166,7 +166,7 @@ class HubAndSpokeMatcher:
         return result
 
     # -----------------------------------------------------------------
-    # Composite: OHRC ↔ IIRS  (via TMC-2 hub)
+    # Composite: OHRC ↔ IIRS  (pairwise prototyping)
     # -----------------------------------------------------------------
 
     def match_composite(
@@ -276,8 +276,8 @@ class HubAndSpokeMatcher:
             if tmc2_image is None:
                 raise ValueError(
                     "Direct OHRC ↔ IIRS matching (320× gap) is not supported. "
-                    "Provide a TMC-2 hub image via tmc2_image= to use "
-                    "the composite (Hop 1 + Hop 2) path."
+                    "Provide a TMC-2 intermediate image using tmc2_image= to use "
+                    "the pairwise prototype path."
                 )
             # Use composite — return only the hop relevant to caller
             composite = self.match_composite(src_image, tmc2_image, dst_image)

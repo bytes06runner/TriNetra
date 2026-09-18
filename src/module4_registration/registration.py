@@ -59,6 +59,17 @@ def evaluate_flight_gate(
     scale_tolerance: float = 0.25,
     cond_thresh: float = 1e5,
     ignore_consensus: bool = False,
+    delta_shuffle: Optional[float] = None,
+    delta_shuffle_thresh: float = 15.0,
+    ratio_rot90: Optional[float] = None,
+    ratio_rot180: Optional[float] = None,
+    ratio_rot270: Optional[float] = None,
+    ratio_vflip: Optional[float] = None,
+    ratio_hflip: Optional[float] = None,
+    ratio_offset: Optional[float] = None,
+    ratio_noise: Optional[float] = None,
+    control_ratios: Optional[list] = None,
+    require_delta_shuffle: bool = False,
 ) -> dict:
     """Evaluate whether a correspondence set satisfies spaceflight safety gates.
 
@@ -66,11 +77,11 @@ def evaluate_flight_gate(
         expected_scale defaults to 1.0 because input crops are independently
         pre-scaled / decimated to a common standardized display canvas (e.g.
         1000x1000 for Hop 1, 800x800 for Hop 2). This pre-scaling absorbs the raw
-        instrument GSD gaps (18.15x for Hop 1, 14.49x for Hop 2) at crop extraction
+        instrument GSD gaps (17.71x for Hop 1, 14.49x for Hop 2) at crop extraction
         time, so a valid geometric solution in canvas space expects a residual scale
         factor near 1.0 (within scale_tolerance = 25%).
 
-    Flight Safety Rules (evaluated in order):
+    Six Spaceflight Safety Rules (evaluated in order):
         1. Inlier Consensus Rule (unless ignore_consensus=True):
            inliers < 20  OR  inlier_ratio_pct < 15.0%.
         2. Matrix Conditioning Rule:
@@ -78,9 +89,16 @@ def evaluate_flight_gate(
            Threshold justification from empirical lunar flight data:
            Passing fits exhibit cond(H) in [689, 3646], whereas degenerate fits
            exhibit cond(H) in [3.5e5, 2.4e6]. 1e5 cleanly separates both regimes.
-        3. Physical Plausibility Rule:
-           |rotation| > max_rotation_deg (default 30°) OR
+        3. Physical Plausibility Rule (Rotation):
+           |rotation| > max_rotation_deg (default 30°).
+        4. Physical Plausibility Rule (Scale):
            |scale - expected_scale| / expected_scale > scale_tolerance (default 25%).
+        5. Transformation Degeneracy Rule (tested via check_degeneracy).
+        6. Negative Control / Shuffle Invariance Rule (Strict Delta_shuffle, H1):
+           Delta_shuffle = ratio_genuine - max(ALL control ratios run,
+                           including rot90, rot180, rot270, vflip, hflip, offset, and noise).
+           Reject if Delta_shuffle < delta_shuffle_thresh (default +15.0%).
+           Also reject if require_delta_shuffle=True and Delta_shuffle is not provided.
     """
     if inlier_ratio_pct is None:
         inlier_ratio_pct = (inliers / total_matches * 100.0) if total_matches > 0 else 0.0
@@ -109,7 +127,7 @@ def evaluate_flight_gate(
             if first_failing_criterion is None:
                 first_failing_criterion = "conditioning"
 
-        # Criterion 3: Physical Plausibility (Scale & Rotation)
+        # Criterion 3: Physical Plausibility (Rotation)
         scale_val = float(np.sqrt(H64[0, 0] ** 2 + H64[1, 0] ** 2))
         rot_val = float(np.degrees(np.arctan2(H64[1, 0], H64[0, 0])))
 
@@ -118,6 +136,7 @@ def evaluate_flight_gate(
             if first_failing_criterion is None:
                 first_failing_criterion = "unphysical_rotation"
 
+        # Criterion 4: Physical Plausibility (Scale)
         if expected_scale is not None and expected_scale > 0:
             scale_err = abs(scale_val - expected_scale) / expected_scale
             if scale_err > scale_tolerance:
@@ -127,6 +146,31 @@ def evaluate_flight_gate(
                 )
                 if first_failing_criterion is None:
                     first_failing_criterion = "unphysical_scale"
+
+    # Criterion 6: Negative Control Shuffle Invariance Rule (Strict Delta_shuffle, H1)
+    if delta_shuffle is None:
+        ctrls = [
+            r for r in (
+                ratio_rot90, ratio_rot180, ratio_rot270,
+                ratio_vflip, ratio_hflip, ratio_offset, ratio_noise
+            ) if r is not None
+        ]
+        if control_ratios is not None:
+            ctrls.extend([r for r in control_ratios if r is not None])
+        if len(ctrls) > 0:
+            delta_shuffle = float(inlier_ratio_pct - max(ctrls))
+
+    if delta_shuffle is not None:
+        if delta_shuffle < delta_shuffle_thresh:
+            reasons.append(
+                f"Negative control shuffle test failed: Delta_shuffle = {delta_shuffle:+.2f}% < {delta_shuffle_thresh:+.1f}%"
+            )
+            if first_failing_criterion is None:
+                first_failing_criterion = "delta_shuffle"
+    elif require_delta_shuffle:
+        reasons.append("Missing required Delta_shuffle measurement under 6-criterion gate")
+        if first_failing_criterion is None:
+            first_failing_criterion = "missing_delta_shuffle"
 
     is_gated = len(reasons) > 0
     return {
@@ -138,6 +182,7 @@ def evaluate_flight_gate(
         "condition_number": cond_val,
         "recovered_scale": scale_val,
         "recovered_rotation_deg": rot_val,
+        "delta_shuffle": delta_shuffle,
         "reasons": reasons,
         "first_failing_criterion": first_failing_criterion,
         "reason": "; ".join(reasons) if is_gated else "Meets flight safety requirements",

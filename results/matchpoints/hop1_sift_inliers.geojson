@@ -1,25 +1,25 @@
 {
   "type": "FeatureCollection",
   "name": "hop1_sift_inliers",
-  "comment": "Local planar approximation about anchor (-69.58019, 32.28800). Lunar radius 1737400 m. Valid only within this crop. Not geodetic coordinates.",
+  "comment": "Local planar approximation about anchor (-89.72070, 223.12570). Lunar radius 1737400 m. Valid only within this crop. Not geodetic coordinates.",
   "features": [
     {
       "type": "Feature",
       "geometry": {
         "type": "Point",
         "coordinates": [
-          32.328358,
-          -69.6510035
+          225.9847384,
+          -89.7352005
         ]
       },
       "properties": {
-        "match_id": 0,
-        "src_x": 367.45,
-        "src_y": 153.76,
-        "ref_x": 590.46,
-        "ref_y": 954.94,
-        "residual_px": 5.8065,
-        "confidence": 0.6129
+        "match_id": 63,
+        "src_x": 755.89,
+        "src_y": 889.99,
+        "ref_x": 914.33,
+        "ref_y": 931.08,
+        "residual_px": 9.1897,
+        "confidence": 0.3874
       }
     },
     {
@@ -27,18 +27,18 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          32.42133,
-          -69.6273144
+          225.5827473,
+          -89.7332421
         ]
       },
       "properties": {
-        "match_id": 42,
-        "src_x": 256.27,
-        "src_y": 393.11,
-        "ref_x": 798.85,
-        "ref_y": 802.75,
-        "residual_px": 3.0128,
-        "confidence": 0.7991
+        "match_id": 71,
+        "src_x": 586.28,
+        "src_y": 445.79,
+        "ref_x": 856.07,
+        "ref_y": 872.86,
+        "residual_px": 2.6845,
+        "confidence": 0.821
       }
     },
     {
@@ -46,18 +46,18 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          32.3469109,
-          -69.5351292
+          225.7900989,
+          -89.7354619
         ]
       },
       "properties": {
-        "match_id": 117,
-        "src_x": 711.09,
-        "src_y": 844.78,
-        "ref_x": 632.05,
-        "ref_y": 210.51,
-        "residual_px": 4.9914,
-        "confidence": 0.6672
+        "match_id": 135,
+        "src_x": 584.78,
+        "src_y": 910.95,
+        "ref_x": 886.12,
+        "ref_y": 938.85,
+        "residual_px": 0.7513,
+        "confidence": 0.9499
       }
     },
     {
@@ -65,18 +65,18 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          32.4126807,
-          -69.6463377
+          225.5889262,
+          -89.7345267
         ]
       },
       "properties": {
-        "match_id": 190,
-        "src_x": 222.35,
-        "src_y": 267.65,
-        "ref_x": 779.47,
-        "ref_y": 924.96,
-        "residual_px": 7.3994,
-        "confidence": 0.5067
+        "match_id": 187,
+        "src_x": 491.46,
+        "src_y": 679.0,
+        "ref_x": 856.97,
+        "ref_y": 911.05,
+        "residual_px": 2.3649,
+        "confidence": 0.8423
       }
     },
     {
@@ -84,18 +84,37 @@
       "geometry": {
         "type": "Point",
         "coordinates": [
-          32.4988318,
-          -69.553928
+          224.9089067,
+          -89.7324483
         ]
       },
       "properties": {
-        "match_id": 383,
-        "src_x": 332.53,
-        "src_y": 904.71,
-        "ref_x": 972.57,
-        "ref_y": 331.28,
-        "residual_px": 4.4802,
-        "confidence": 0.7013
+        "match_id": 275,
+        "src_x": 36.71,
+        "src_y": 16.93,
+        "ref_x": 758.42,
+        "ref_y": 849.26,
+        "residual_px": 3.5625,
+        "confidence": 0.7625
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          225.820429,
+          -89.732277
+        ]
+      },
+      "properties": {
+        "match_id": 317,
+        "src_x": 933.06,
+        "src_y": 369.85,
+        "ref_x": 890.52,
+        "ref_y": 844.17,
+        "residual_px": 8.5335,
+        "confidence": 0.4311
       }
     }
   ]

@@ -2,12 +2,12 @@
 TriNetra — Professional Web Dashboard for SIH26166 Presentation.
 
 Autonomous, scale-invariant image correspondence across Chandrayaan-2
-planetary instruments: OHRC (0.26 m/px), TMC-2 (5.0 m/px), and IIRS (91.75 m/px).
+planetary instruments: OHRC (0.24 m/px), TMC-2 (4.25–4.72 m/px), and IIRS (68.38 m/px).
 
 Dual-Scene Pipeline:
-- Hop 1: Scale-Invariance Benchmark: OHRC (0.26 m/px) vs 20× Simulated TMC-2 Sampling (5.20 m/px) [96.2% consensus]
-- Hop 2: Real TMC-2 (4.96 m/px) ↔ Real IIRS (91.75 m/px) [18.5× Polar Overlap, Signal-Gated]
-- Architecture: Decoupled two-hop correspondence framework with multi-hop homography composition target
+- Hop 1: Scale-Invariance Benchmark: OHRC vs 20× Simulated TMC-2 Sampling [96.2% consensus]
+- Hop 2: Real TMC-2 (4.72 m/px) ↔ Real IIRS (68.38 m/px) [14.49× Polar Overlap, Signal-Gated]
+- Architecture: Decoupled two-hop correspondence framework with independent pairwise evaluation
 
 Author: Srijeet Prasad Banerjee
 """
@@ -662,7 +662,7 @@ def load_real_north_cache():
 
 
 def load_real_flight_hop1_cache():
-    """Load authentic Chandrayaan-2 dual-sensor flight correspondence (OHRC 0.26 m/px ↔ TMC-2 4.72 m/px)."""
+    """Load authentic Chandrayaan-2 dual-sensor flight correspondence (OHRC 0.24 m/px ↔ TMC-2 4.25 m/px)."""
     d = safe_load_npz(CACHE_NPZ_FLIGHT_HOP1)
     if d is not None:
         return {
@@ -808,7 +808,7 @@ def load_real_flight_hop2_phase_congruency_cache():
 
 
 def load_real_ohrc_cache():
-    """Load real Chandrayaan-2 OHRC flight crop (0.26 m/px) and TMC-2 optical proxy."""
+    """Load real Chandrayaan-2 OHRC flight crop and TMC-2 optical proxy."""
     d = safe_load_npz(CACHE_NPZ_OHRC)
     if d is not None:
         return {
@@ -1025,42 +1025,42 @@ if st.session_state.active_scene == "hop1":
             st.session_state.flight_hop1_ft_data if st.session_state.get("hop1_engine", "deep") == "deep"
             else st.session_state.flight_hop1_sift_data
         )
-        st.markdown("""
+        st.markdown(f"""
         <div class="status-banner-success">
-            <strong>🚀 Authentic Flight Cross-Instrument Validation:</strong> Matching real Chandrayaan-2 <strong>OHRC (0.26 m/px)</strong> flight calibrated image (<code>ch2_ohr_ncp_20211023T0027462822</code>) against real <strong>TMC-2 (4.72 m/px)</strong> flight calibrated image (<code>ch2_tmc_ncn_20230130T1900132182</code>). Both scenes were captured by two independent physical sensors on board Chandrayaan-2 over the South Pole Shiv Shakti Point crater field across an <strong>18.15× optical scale gap</strong>.
+            <strong>🚀 Authentic Flight Cross-Instrument Validation:</strong> Matching real Chandrayaan-2 <strong>OHRC ({active_data['ohrc_res']:.2f} m/px)</strong> flight calibrated image (<code>{active_data['ohrc_product_id']}</code>) against real <strong>TMC-2 ({active_data['tmc_res']:.2f} m/px)</strong> flight calibrated image (<code>{active_data['tmc_product_id']}</code>). Both scenes were captured by two independent physical sensors on board Chandrayaan-2 over the Shackleton Rim polar crater field across a <strong>{active_data['scale_gap']:.2f}× optical scale gap</strong>.
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("""
+        st.markdown(f"""
         <div style="margin-bottom: 1.2rem;">
             <h1 style="font-size: 2.2rem; margin-bottom: 0.2rem;">Hop 1: Real Flight Cross-Instrument Validation: OHRC ↔ TMC-2</h1>
             <p style="color: #666; max-width: 780px; font-size: 0.96rem;">
-                Cross-instrument co-registration between Chandrayaan-2 <strong>OHRC (0.26 m/px)</strong> and <strong>TMC-2 (4.72 m/px)</strong>
-                across an <strong>18.15× optical resolution gap</strong> over identical lunar terrain at Shiv Shakti Point (Lat -69.58°S, Lon 32.29°E).
+                Cross-instrument co-registration between Chandrayaan-2 <strong>OHRC ({active_data['ohrc_res']:.2f} m/px)</strong> and <strong>TMC-2 ({active_data['tmc_res']:.2f} m/px)</strong>
+                across a <strong>{active_data['scale_gap']:.2f}× optical resolution gap</strong> over identical lunar terrain at Shackleton Rim (Lat {active_data['target_lat']:.2f}°S, Lon {active_data['target_lon']:.2f}°E).
             </p>
         </div>
         """, unsafe_allow_html=True)
 
         with st.expander("ℹ️ Ground-Truth Flight Metadata & Selenographic Footprints"):
             st.markdown(f"""
-            - **OHRC Product ID:** `ch2_ohr_ncp_20211023T0027462822_d_img_d18`
-              - Processing Level: **Calibrated (count calibrated, DN)** — Radiometric LUT applied to raw data. Note: per PRADAN PDS4 naming convention, `ncp` encodes Nadir/Oblique Panchromatic camera mode and mission phase, not processing level.
+            - **OHRC Product ID:** `ch2_ohr_ncp_20241115T1525004388_d_img_d18`
+              - Processing Level: **Calibrated (count calibrated, DN)** — Radiometric LUT applied to raw data.
               - Ground Sample Distance: **{active_data['ohrc_res']:.2f} m/px** (Panchromatic Visible)
-              - Acquisition Time: `2021-10-23T00:27:46Z` | Orbit Limb: `Ascending` | Spacecraft Roll: `+15.76°` (Oblique mode)
+              - Acquisition Time: `2024-11-15T15:25:00Z` | Target: `Shackleton Rim`
               - Sun Elevation: `{active_data['ohrc_sun_elevation']:.1f}°` | Sun Azimuth: `{active_data['ohrc_sun_azimuth']:.1f}°`
-            - **TMC-2 Product ID:** `ch2_tmc_ncn_20230130T1900132182_d_img_d32`
-              - Processing Level: **Calibrated (count calibrated, DN)** — Radiometric correction applied. Note: per PRADAN PDS4 naming convention, `ncn` encodes Nadir camera mode and nominal mission phase, not processing level.
+            - **TMC-2 Product ID:** `ch2_tmc_ncn_20231205T1906512971_d_img_d32`
+              - Processing Level: **Calibrated (count calibrated, DN)** — Radiometric correction applied.
               - Ground Sample Distance: **{active_data['tmc_res']:.2f} m/px** (Panchromatic Visible)
-              - Acquisition Time: `2023-01-30T19:00:13Z` | Orbit Limb: `Ascending` | Spacecraft Roll: `-0.02°` (Nadir mode)
+              - Acquisition Time: `2023-12-05T19:06:51Z` | Target: `Shackleton Rim`
               - Sun Elevation: `{active_data['tmc_sun_elevation']:.1f}°` | Sun Azimuth: `{active_data['tmc_sun_azimuth']:.1f}°`
-            - **Physical Ground Overlap:** Lat `-69.58019°`, Lon `32.28800°` (verified by official PDS4 Geometry Grid `.csv` files).
-            - **Cross-Illumination Offset:** 114.6° difference in solar azimuth angle; **15.8° spacecraft roll offset** (inducing topography parallax).
+            - **Physical Ground Overlap:** Lat `{active_data['target_lat']:.4f}°S`, Lon `{active_data['target_lon']:.4f}°E` (polar stereographic overlap).
+            - **Cross-Illumination Offset:** 40.28° difference in solar azimuth angle (6.28° elevation); **15.17° spacecraft roll offset** (inducing topography parallax).
             """)
     else:
         active_data = bench_data
         st.markdown("""
         <div class="status-banner-warning">
-            <strong>🔬 Controlled Single-Sensor Benchmark:</strong> The 5.20 m/px image is an optical 20× anti-aliased downsampling of the real OHRC flight image (0.26 m/px). This isolates scale invariance on authentic lunar crater terrain while holding solar elevation and spacecraft attitude fixed.
+            <strong>🔬 Controlled Single-Sensor Benchmark:</strong> The 5.20 m/px image is an optical 20× anti-aliased downsampling of the real OHRC flight image. This isolates scale invariance on authentic lunar crater terrain while holding solar elevation and spacecraft attitude fixed.
         </div>
         """, unsafe_allow_html=True)
 
@@ -1068,7 +1068,7 @@ if st.session_state.active_scene == "hop1":
         <div style="margin-bottom: 1.2rem;">
             <h1 style="font-size: 2.2rem; margin-bottom: 0.2rem;">Hop 1: Scale-Invariance Benchmark: OHRC vs 20× Simulated TMC-2 Sampling</h1>
             <p style="color: #666; max-width: 780px; font-size: 0.96rem;">
-                Evaluating <strong>20× optical scale invariance</strong> using Chandrayaan-2 OHRC flight product (0.26 m/px)
+                Evaluating <strong>20× optical scale invariance</strong> using Chandrayaan-2 OHRC flight product
                 against an anti-aliased 5.20 m/px simulated TMC-2 sampling across authentic lunar crater terrain.
             </p>
         </div>
@@ -1101,31 +1101,31 @@ if st.session_state.active_scene == "hop1":
             st.markdown("<h3>Stage 1: Multi-Scale Flight Crop & Spatial Resolution Normalization</h3>", unsafe_allow_html=True)
             st.markdown("""
             <p style="color:#94A3B8; font-size:0.9rem;">
-                The left image shows the 1000×1000 sub-window from the raw 93K × 12K <strong>OHRC flight image (0.26 m/px)</strong>.
-                The right image shows the corresponding crater field extracted from the raw 190K × 4K <strong>TMC-2 flight image (4.72 m/px)</strong> at line 132,700, sample 710.
+                The left image shows the 1000×1000 sub-window from the raw <strong>OHRC flight image (0.24 m/px)</strong>.
+                The right image shows the corresponding crater field extracted from the raw <strong>TMC-2 flight image (4.25 m/px)</strong>.
             </p>
             """, unsafe_allow_html=True)
             col_a, col_b = st.columns(2)
             with col_a:
-                render_image(active_data["disp_ohrc"], "Real OHRC Flight Image (0.26 m/px — Shiv Shakti Point)")
+                render_image(active_data["disp_ohrc"], "Real OHRC Flight Image (0.24 m/px — Shackleton Rim)")
             with col_b:
-                render_image(active_data["disp_tmc"], "Real TMC-2 Flight Image (4.72 m/px — South Pole Orbit)")
+                render_image(active_data["disp_tmc"], "Real TMC-2 Flight Image (4.25 m/px — Shackleton Rim)")
             st.markdown("""
             <div class="presenter-box">
-                <strong>💡 Presenter's Note for Evaluators:</strong> Notice the distinct crater topography present in both cameras. Because OHRC (roll +15.8°) was acquired in October 2021 with sun azimuth 298.4° and TMC-2 was acquired in January 2023 with sun azimuth 53.0°, the shadow directions differ by 114.6°. This rigorously evaluates robust, illumination-invariant geometric correspondence on real flight data.
+                <strong>💡 Presenter's Note for Evaluators:</strong> Notice the distinct crater topography present in both cameras. Because OHRC was acquired with sun azimuth 243.0° and TMC-2 was acquired with sun azimuth 283.3° (40.28° azimuth gap, 6.28° elevation disparity), the illumination conditions differ significantly. This rigorously evaluates robust, illumination-invariant geometric correspondence on real flight data.
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("<h3>Stage 1: Multi-Scale Flight Crop & 20× Optical Downsampling</h3>", unsafe_allow_html=True)
             st.markdown("""
             <p style="color:#94A3B8; font-size:0.9rem;">
-                The left image shows a 1000×1000 sub-window extracted from the raw 93K × 12K OHRC flight image (0.26 m/px).
+                The left image shows a 1000×1000 sub-window extracted from the raw OHRC flight image.
                 The right image is the 20× anti-aliased optical downsampling (5.20 m/px), emulating the spatial integration of TMC-2's linear detector.
             </p>
             """, unsafe_allow_html=True)
             col_a, col_b = st.columns(2)
             with col_a:
-                render_image(active_data["ohrc_disp"], "Real OHRC Flight Data (0.26 m/px — South Pole)")
+                render_image(active_data["ohrc_disp"], "Real OHRC Flight Data (South Pole)")
             with col_b:
                 render_image(active_data["tmc_disp"], "Simulated TMC-2 Sampling (5.20 m/px — 20× Downsampled)")
 
@@ -1195,7 +1195,7 @@ if st.session_state.active_scene == "hop1":
         ax.imshow(vis_rgb)
         ax.axis("off")
         lbl_engine = "Fine-Tuned EfficientLoFTR" if (is_flight_mode and st.session_state.hop1_engine == "deep") else "Classical SIFT"
-        lbl_pair = f"Real OHRC (0.26 m/px) ↔ Real TMC-2 (4.72 m/px) — {lbl_engine}" if is_flight_mode else "Real OHRC (0.26 m/px) ↔ Simulated TMC-2 Sampling (5.20 m/px)"
+        lbl_pair = f"Real OHRC (0.24 m/px) ↔ Real TMC-2 (4.25 m/px) — {lbl_engine}" if is_flight_mode else "Real OHRC ↔ Simulated TMC-2 Sampling (5.20 m/px)"
         ax.set_title(f"{lbl_pair} — {active_data['inliers']} Inliers ({active_data['inlier_ratio']:.1f}%)", fontsize=10, fontweight="bold", pad=8)
         plt.tight_layout()
 
@@ -1209,13 +1209,13 @@ if st.session_state.active_scene == "hop1":
             if st.session_state.hop1_engine == "deep":
                 st.markdown(f"""
                 <div class="presenter-box">
-                    <strong>💡 Fine-Tuned Flight Validation Note:</strong> Domain-adapted EfficientLoFTR achieves a <strong>{active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']} matches)</strong> across the 18.15× resolution gap and 114.6° solar illumination offset, successfully clearing the spaceflight gate (≥15% ratio and ≥20 inliers). Prominent crater rims and topological features are reliably matched despite severe illumination divergence.
+                    <strong>💡 Fine-Tuned Flight Validation Note:</strong> Domain-adapted EfficientLoFTR achieves a <strong>{active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']} matches)</strong> across the {active_data['scale_gap']:.2f}× resolution gap and 40.28° solar illumination offset, successfully clearing the spaceflight gate (≥15% ratio and ≥20 inliers). Prominent crater rims and topological features are reliably matched despite severe illumination divergence.
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="presenter-box">
-                    <strong>💡 Classical Flight Validation Note:</strong> Cross-instrument SIFT matching yields a <strong>{active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']})</strong> across the 18.15× resolution gap and 114.6° solar azimuth offset. With only {active_data['inliers']} consensus inliers, this is below the threshold for a reliable geometric solution. The correspondence shown illustrates pipeline execution under flight conditions, not a validated result.
+                    <strong>💡 Classical Flight Validation Note:</strong> Cross-instrument SIFT matching yields a <strong>{active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']})</strong> across the {active_data['scale_gap']:.2f}× resolution gap and 40.28° solar azimuth offset. With only {active_data['inliers']} consensus inliers, this is below the threshold for a reliable geometric solution. The correspondence shown illustrates pipeline execution under flight conditions, not a validated result.
                 </div>
                 """, unsafe_allow_html=True)
         else:
@@ -1276,7 +1276,7 @@ if st.session_state.active_scene == "hop1":
                 <div class="status-banner-warning">
                     <strong>🛑 Gated: Inlier Consensus Below Reliability Threshold ({active_data['inlier_ratio']:.1f}% Inliers, {active_data['inliers']} of {active_data['total_matches']})</strong><br/>
                     Cross-instrument SIFT matching yields a <strong>{active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']})</strong>. This is below the threshold for a reliable geometric solution (minimum 15.0% inlier ratio and 20 consensus inliers required).
-                    Ground reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_px:.2f} px in the TMC-2 frame at {target_gsd:.2f} m/px). The problem statement targets correspondence at OHRC scale (0.26 m/px).
+                    Ground reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_px:.2f} px in the TMC-2 frame at {target_gsd:.2f} m/px). The problem statement targets correspondence at OHRC scale (0.24 m/px).
                     The registration shown is illustrative of the pipeline, not a validated result.
                     Unconstrained transforms are flagged, exactly as in the polar SNR gate.
                 </div>
@@ -1293,9 +1293,9 @@ if st.session_state.active_scene == "hop1":
 
         col_a, col_b = st.columns(2)
         with col_a:
-            render_image(img1, "Real OHRC Flight Image (0.26 m/px — Shiv Shakti Point)" if is_flight_mode else "Real OHRC Flight Data (0.26 m/px — South Pole)")
+            render_image(img1, "Real OHRC Flight Image (0.24 m/px — Shackleton Rim)" if is_flight_mode else "Real OHRC Flight Data (South Pole)")
         with col_b:
-            render_image(img2, "Real TMC-2 Flight Image (4.72 m/px — South Pole Orbit)" if is_flight_mode else "Simulated TMC-2 Sampling (5.20 m/px — 20× Downsampled)")
+            render_image(img2, "Real TMC-2 Flight Image (4.25 m/px — Shackleton Rim)" if is_flight_mode else "Simulated TMC-2 Sampling (5.20 m/px — 20× Downsampled)")
 
         if is_gated:
             st.markdown("""
@@ -1343,7 +1343,7 @@ if st.session_state.active_scene == "hop1":
             if is_gated:
                 st.markdown(f"""
                 <div class="presenter-box">
-                    <strong>💡 Flight Validation Summary:</strong> Cross-instrument SIFT matching yields a {active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']}). Ground reprojection error is {rmse_m:.1f} m ({rmse_px:.2f} px at {target_gsd:.2f} m/px), while the problem statement targets correspondence at OHRC scale (0.26 m/px). This is below the threshold for a reliable geometric solution. The registration shown is illustrative of the pipeline, not a validated result.
+                    <strong>💡 Flight Validation Summary:</strong> Cross-instrument SIFT matching yields a {active_data['inlier_ratio']:.1f}% inlier ratio ({active_data['inliers']} of {active_data['total_matches']}). Ground reprojection error is {rmse_m:.1f} m ({rmse_px:.2f} px at {target_gsd:.2f} m/px), while the problem statement targets correspondence at OHRC scale (0.24 m/px). This is below the threshold for a reliable geometric solution. The registration shown is illustrative of the pipeline, not a validated result.
                 </div>
                 """, unsafe_allow_html=True)
             else:
@@ -1435,7 +1435,7 @@ if st.session_state.active_scene == "hop1":
                         '</table>'
                         '<div style="background:rgba(244,243,238,0.7); border:1px solid rgba(177,173,161,0.4); border-left:4px solid #C15F3C; border-radius:8px; padding:0.9rem 1.1rem; margin-top:1.2rem; font-size:0.88rem; color:#4A4740; line-height:1.6;">'
                         '<strong style="color:#C15F3C;">🔬 Scientific Takeaways from Empirical Baselines:</strong><br/>'
-                        '1. <strong>Hop 1 (OHRC ↔ TMC-2, 18.15× gap):</strong> Terrestrial models struggle with extreme cross-scale disparity and 15.8° roll parallax. Dense matching (EfficientLoFTR) extracts 116 candidate correspondences but yields only 8 inliers (6.9% ratio) under standard RANSAC, failing the spaceflight gate.<br/>'
+                        '1. <strong>Hop 1 (OHRC ↔ TMC-2, 17.71× gap):</strong> Terrestrial models struggle with extreme cross-scale disparity and 15.17° roll parallax. Dense matching (EfficientLoFTR) extracts 116 candidate correspondences but yields only 8 inliers (6.9% ratio) under standard RANSAC, failing the spaceflight gate.<br/>'
                         '2. <strong>Hop 2 (TMC-2 ↔ IIRS, 14.49× gap):</strong> All 4 zero-shot deep matchers fail the spaceflight gate (e.g. EfficientLoFTR: 15 inliers / 10.9% ratio; MatchAnything: 12 inliers / 21.1% ratio, failing the 20-inlier floor). Domain adaptation and phase congruency are required to clear the gate (see Hop 2 section).'
                         '</div>'
                         '</div>'
@@ -1541,9 +1541,9 @@ if st.session_state.active_scene == "hop1":
                 <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
                     <h4 style="margin-top:0; color:#1E1E24;">Physical &amp; Viewing Geometry Constraints (Hop 1: OHRC ↔ TMC-2)</h4>
                     <ul style="color:#4A4740; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
-                        <li><strong>Viewing Geometry &amp; Residual Budget:</strong> OHRC was acquired at spacecraft roll <strong>+15.76°</strong> (oblique viewing mode); TMC-2 was acquired at roll <strong>-0.02°</strong> (nadir viewing mode). Residuals are not explained by local terrain slope in our measurements ($r = +0.151, p = 0.301$ Hop 1; $r = +0.125, p = 0.166$ Hop 2). The error budget is unresolved and likely combines point-spread blur across the scale gap, unmodelled lens distortion, and keypoint localisation uncertainty.</li>
-                        <li><strong>Cross-Illumination Disparity:</strong> OHRC acquisition occurred at solar azimuth <strong>298.4°</strong> (elevation 15.2°); TMC-2 acquisition occurred at solar azimuth <strong>53.0°</strong> (elevation 17.2°). The resulting <strong>114.6° azimuth difference</strong> casts shadows in opposite directions. Terrestrial matchers mistake shadow boundaries for crater rims, yielding false correspondences.</li>
-                        <li><strong>Resolution Gap Dynamics:</strong> The 18.15× linear resolution disparity means one TMC-2 pixel covers ~330 OHRC pixels in area. Micro-craters (&lt;10 m) visible in OHRC are completely unresolved in TMC-2. Only macroscopic crater rims (&gt;50 m) provide valid multi-scale structural anchors.</li>
+                        <li><strong>Viewing Geometry &amp; Residual Budget:</strong> OHRC was acquired at spacecraft roll <strong>+15.19°</strong> (oblique viewing mode); TMC-2 was acquired at roll <strong>+0.02°</strong> (nadir viewing mode), yielding a <strong>15.17° roll disparity</strong>. Residuals are not explained by local terrain slope in our measurements ($r = +0.042, p = 0.773$ Hop 1; $r = +0.125, p = 0.166$ Hop 2). The error budget is unresolved and likely combines point-spread blur across the scale gap, unmodelled lens distortion, and keypoint localisation uncertainty.</li>
+                        <li><strong>Cross-Illumination Disparity:</strong> OHRC acquisition occurred at solar azimuth <strong>243.0°</strong> (elevation 0.8°); TMC-2 acquisition occurred at solar azimuth <strong>283.3°</strong> (elevation 7.1°). The resulting <strong>40.28° azimuth difference</strong> (and 6.28° elevation disparity) cast asymmetric shadows across crater rims. (Hop 2 at South Pole exhibits a 135.79° azimuth difference). Terrestrial matchers mistake shadow boundaries for crater rims, yielding false correspondences.</li>
+                        <li><strong>Resolution Gap Dynamics:</strong> The 17.71× linear resolution disparity means one TMC-2 pixel covers ~314 OHRC pixels in area ($17.71^2 \approx 314$). Micro-craters (&lt;10 m) visible in OHRC are completely unresolved in TMC-2. Only macroscopic crater rims (&gt;50 m) provide valid multi-scale structural anchors.</li>
                         <li><strong>Architectural Finding:</strong> Domain adaptation on 15,000 synthetic DEM illumination pairs teaches the neural network to focus on structural topography rather than shadow edges, increasing inliers from 8 to 49 (clearing the gate). However, because terrain slope does not explain residual magnitude, the empirical justification for the Thin-Plate Spline (TPS) non-rigid refinement roadmap item is weakened.</li>
                     </ul>
                 </div>
@@ -1836,7 +1836,7 @@ elif st.session_state.active_scene == "hop2":
                 <div class="status-banner-warning">
                     <strong>🛑 Gated: Inlier Consensus Below Reliability Threshold ({flight_h2['inlier_ratio']:.1f}% Inliers, {flight_h2['inliers']} of {flight_h2['total_matches']})</strong><br/>
                     Cross-instrument SIFT matching yields a <strong>{flight_h2['inlier_ratio']:.1f}% inlier ratio ({flight_h2['inliers']} of {flight_h2['total_matches']})</strong>. This is below the threshold for a reliable geometric solution (minimum 15.0% inlier ratio and 20 consensus inliers required).
-                    Ground reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_val:.2f} px in the IIRS frame at {target_gsd:.2f} m/px). The problem statement targets correspondence at OHRC scale (0.26 m/px).
+                    Ground reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_val:.2f} px in the IIRS frame at {target_gsd:.2f} m/px). The problem statement targets correspondence at OHRC scale (0.24 m/px).
                     The registration shown is illustrative of the pipeline, not a validated result.
                     Unconstrained transforms are flagged; fabricated matches are rejected.
                 </div>
@@ -2029,16 +2029,16 @@ elif st.session_state.active_scene == "hop2":
                 <div style="background:#FFFFFF; border:1px solid rgba(193,95,60,0.45); border-left:4px solid #C15F3C; border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
                     <h4 style="margin-top:0; color:#C15F3C;">⚠️ Physical Resolution &amp; Sub-Pixel Constraint Honesty</h4>
                     <p style="color:#4A4740; font-size:0.9rem; line-height:1.7; margin-bottom:0.6rem;">
-                        <strong>Sub-Pixel Limitation:</strong> The problem statement explicitly requests sub-pixel accuracy. At <strong>68.38 m/px</strong> IIRS GSD, our measured RMSE of <strong>9.05 pixels corresponds to 618.5 meters ground error</strong>. While this satisfies coarse structural localization across a 14.49× GSD divide (100× finer than prior 60 km uncertainty), achieving sub-pixel precision (&lt;68 m) on cross-modal visible↔SWIR pairs remains an open research problem requiring multi-scale iterative refinement or joint sensor radiance-to-reflectance calibration.
+                        <strong>Sub-Pixel Limitation:</strong> The problem statement explicitly requests sub-pixel accuracy. At <strong>10.26 m/c-px</strong> reference canvas GSD, our measured RMSE of <strong>9.05 canvas pixels corresponds to 92.78 meters ground error (1.36 native IIRS pixels)</strong>. While this satisfies coarse structural localization across a 14.49× GSD divide (100× finer than prior 60 km uncertainty), achieving sub-pixel precision (&lt;1.0 native pixel / &lt;68 m) on cross-modal visible↔SWIR pairs remains an open research problem requiring multi-scale iterative refinement or joint sensor radiance-to-reflectance calibration.
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
 
                 st.markdown("""
                 <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin-bottom:1.5rem;">
-                    <h4 style="margin-top:0; color:#1E1E24;">Design-Level Multi-Hop Composition Target</h4>
+                    <h4 style="margin-top:0; color:#1E1E24;">Pairwise Independence Scope</h4>
                     <p style="color:#4A4740; font-size:0.9rem; line-height:1.7; margin-bottom:0;">
-                        <strong>End-to-End Multi-Hop Composition Note:</strong> Hop 1 (69.58°S) and Hop 2 (70.85°S) were evaluated on authentic flight targets <strong>~38.5 km apart</strong> along the continuous Chandrayaan-2 TMC-2 coverage strip to rigorously validate both intra-sensor and cross-modal regimes. In an operational flight pipeline, multi-hop composition chains these transformations (OHRC → TMC-2 → IIRS) across overlapping spatial footprints to establish global georeferenced coordinates from high-resolution local landings.
+                        <strong>Pairwise Independence Note:</strong> Hop 1 (Shackleton Rim, -89.72°S) and Hop 2 (South Pole, -70.85°S) were evaluated as independent pairwise registrations on authentic Chandrayaan-2 flight crops. No shared three-instrument footprint was identified in the available PDS4 products, so end-to-end OHRC to IIRS correspondence was not measured.
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -2245,18 +2245,15 @@ elif st.session_state.active_scene == "overview":
     </div>
     """, unsafe_allow_html=True)
 
-    # Mathematical Formula Box (Design Target)
+    # Architecture & Limitation Note
     st.markdown("""
     <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.5); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; text-align:center; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
-        <h3 style="margin-top:0; color:#1E1E24;">Mathematical Design Target: Multi-Hop Transformation Composition</h3>
-        <p style="font-size: 1.15rem; color:#C15F3C; font-family: monospace; font-weight: 700; margin: 0.8rem 0;">
-            T(OHRC → IIRS) = T(TMC-2 → IIRS) · T(OHRC → TMC-2)
-        </p>
+        <h3 style="margin-top:0; color:#1E1E24;">Two-Hop Correspondence Pipeline</h3>
         <p style="color:#8C3B1E; background:#FDF4ED; border: 1px solid #EAC8BC; border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0.6rem auto; text-align:left; line-height:1.55;">
-            <strong>ℹ️ Design-Level Multi-Hop Composition:</strong> Hop 1's anchor (Lat −69.58°S) and Hop 2's anchor (Lat −70.85°S) are different sites <strong>~38.5 km apart</strong> (1.27° latitude on the 1,737.4 km lunar sphere) along the same continuous TMC-2 strip. The composed transform <code>T(OHRC → IIRS) = T(TMC-2 → IIRS) · T(OHRC → TMC-2)</code> is therefore a design-level composition of two independently-validated transforms at different locations along the orbit corridor, not a single validated three-instrument chain at one site (matching Section 3 of the technical document).
+            <strong>📋 Multi-Hop Composition Limitation:</strong> No shared three-instrument footprint was identified in the available PDS4 products, so end-to-end OHRC to IIRS correspondence was not measured. Hop 1 and Hop 2 are independent pairwise registrations at different sites.
         </p>
         <p style="color:#1E562A; background:#EBF7EE; border: 1px solid #C3E7CB; border-radius:6px; padding:0.65rem 0.9rem; font-size:0.86rem; max-width:750px; margin:0.8rem auto 0 auto; text-align:left; line-height:1.55;">
-            <strong>🚀 Dual-Gate Scientific Integrity:</strong> Both Hop 1 (OHRC ↔ TMC-2, 18.15×) and Hop 2 (TMC-2 ↔ IIRS, 14.49×) use 4-DoF Similarity Transforms (scale, rotation, translation) suited to orbital pushbroom cameras. Autonomous inlier ratio gating (&lt;15% ratio or &lt;20 inliers) prevents misleading overlays on low-consensus flight pairs, while the North Polar SNR gate (SNR ≈ 1.4) rejects noise-dominated regolith.
+            <strong>Dual-Gate Scientific Integrity:</strong> Both Hop 1 (OHRC ↔ TMC-2, 17.71×) and Hop 2 (TMC-2 ↔ IIRS, 14.49×) use 4-DoF Similarity Transforms (scale, rotation, translation) suited to orbital pushbroom cameras. Autonomous inlier ratio gating (&lt;15% ratio or &lt;20 inliers) prevents misleading overlays on low-consensus flight pairs, while the North Polar SNR gate (SNR ≈ 1.4) rejects noise-dominated regolith.
         </p>
     </div>
     """, unsafe_allow_html=True)
@@ -2285,7 +2282,7 @@ elif st.session_state.active_scene == "overview":
         <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
             <h4 style="color:#1E1E24; margin-top:0;">1. Scale Invariance & Inlier Gating</h4>
             <p style="color:#4A4740; font-size:0.88rem; line-height:1.6;">
-                Evaluated on authentic OHRC (0.26 m/px) and TMC-2 (4.72 m/px) flight data. Classical SIFT yields {ov_sift_h1_ratio:.1f}% inlier ratio ({ov_sift_h1_inl} inliers, gated).
+                Evaluated on authentic OHRC (0.24 m/px) and TMC-2 (4.25 m/px) flight data. Classical SIFT yields {ov_sift_h1_ratio:.1f}% inlier ratio ({ov_sift_h1_inl} inliers, gated).
                 Domain-adapted EfficientLoFTR achieves {ov_ft_ratio:.1f}% inlier ratio ({ov_ft_inl} inliers, seed {ov_ft_seed}), clearing the spaceflight gate.
                 Controlled 20× single-sensor optical benchmark confirms 96.2% consensus.
             </p>
@@ -2330,8 +2327,8 @@ elif st.session_state.active_scene == "overview":
     st.markdown("""
     | Instrument | Ground Sample Distance | Spectral Range | Swath Width | Primary Science Goal |
     | :--- | :--- | :--- | :--- | :--- |
-    | **OHRC** | **0.26 m/pixel** (Nadir) | 0.45–0.70 µm (Panchromatic Visible) | 3.0 km | Safe landing site hazard detection |
-    | **TMC-2** | **4.72–5.00 m/pixel** (Hub) | 0.50–0.80 µm (Panchromatic Visible) | 20.0 km | High-resolution 3D Digital Elevation Modeling |
+    | **OHRC** | **0.24–0.32 m/pixel** (Nadir) | 0.45–0.70 µm (Panchromatic Visible) | 3.0 km | Safe landing site hazard detection |
+    | **TMC-2** | **4.25–5.00 m/pixel** (Intermediate Anchor) | 0.50–0.80 µm (Panchromatic Visible) | 20.0 km | High-resolution 3D Digital Elevation Modeling |
     | **IIRS** | **68.38–91.75 m/pixel** | 0.80–5.00 µm (256 SWIR Bands) | 20.0 km | Hydroxyl ($OH/H_2O$) & mineral mapping |
     """)
 

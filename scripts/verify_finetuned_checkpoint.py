@@ -17,6 +17,43 @@ if 'src' in sys.modules and not hasattr(sys.modules['src'], 'loftr'):
     del sys.modules['src']
 
 from src.loftr import LoFTR, full_default_cfg
+from typing import Dict, Any
+
+def assert_cache_provenance(source_data: Any, arrays: Dict[str, np.ndarray], metadata: Dict[str, Any]) -> None:
+    """Assert that image arrays and metadata originate strictly from the same source cache.
+    
+    Raises ValueError if there is any provenance mismatch across source and output.
+    """
+    for arr_name, arr in arrays.items():
+        if arr_name in source_data:
+            if not np.array_equal(arr, source_data[arr_name]):
+                raise ValueError(
+                    f"Provenance violation: Array '{arr_name}' does not match source cache array!"
+                )
+    
+    # Verify latitude consistency
+    src_lat = float(source_data.get('center_lat', source_data.get('target_lat', 0.0)))
+    meta_lat = float(metadata.get('center_lat', metadata.get('target_lat', 0.0)))
+    if not np.isclose(src_lat, meta_lat, atol=1e-4):
+        raise ValueError(
+            f"Provenance violation: Output latitude ({meta_lat:.5f}) differs from source cache ({src_lat:.5f})!"
+        )
+
+    # Verify GSD consistency
+    src_ohrc_gsd = float(source_data.get('ohrc_gsd', source_data.get('ohrc_res', 0.0)))
+    meta_ohrc_res = float(metadata.get('ohrc_res', metadata.get('ohrc_gsd', 0.0)))
+    if not np.isclose(src_ohrc_gsd, meta_ohrc_res, atol=1e-4):
+        raise ValueError(
+            f"Provenance violation: Output OHRC GSD ({meta_ohrc_res:.3f}) differs from source ({src_ohrc_gsd:.3f})!"
+        )
+
+    # Verify product ID consistency
+    src_ohrc_p = str(source_data.get('ohrc_product', source_data.get('ohrc_product_id', '')))
+    meta_ohrc_p = str(metadata.get('ohrc_product_id', metadata.get('ohrc_product', '')))
+    if src_ohrc_p and meta_ohrc_p and src_ohrc_p != meta_ohrc_p:
+        raise ValueError(
+            f"Provenance violation: Output OHRC product ID ({meta_ohrc_p}) differs from source ({src_ohrc_p})!"
+        )
 
 def main():
     RNG_SEED = 42
@@ -125,7 +162,6 @@ def main():
         print("YES")
     else:
         print("NO")
-        
     # 7. Save a verification visualization to outputs/qa and assets/qa
     out_dir = REPO_ROOT / 'outputs' / 'qa'
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -136,13 +172,11 @@ def main():
     
     # Visualization
     fig, ax = plt.subplots(1, 1, figsize=(15, 8))
-    # Side by side disp_ohrc and disp_tmc at 1000x1000 (which are the original size arrays)
     img0_full = disp_ohrc
     img1_full = disp_tmc
     
     concat_img = np.concatenate([img0_full, img1_full], axis=1)
     
-    # If grayscale, plot with cmap gray
     if len(concat_img.shape) == 2:
         ax.imshow(concat_img, cmap='gray')
     else:
@@ -176,9 +210,8 @@ def main():
     print(f"\nSaved visualization to {out_path} and {assets_out_path}")
     
     # Save the verified fine-tuned cache for app.py Dual-Engine Switcher
+    # CRITICAL: Metadata is read strictly from the SAME source cache (data) as the arrays!
     cache_ft_path = REPO_ROOT / 'assets' / 'real_cache' / 'real_flight_hop1_finetuned.npz'
-    orig_h1_path = REPO_ROOT / 'assets' / 'real_cache' / 'real_flight_hop1.npz'
-    orig_meta = np.load(orig_h1_path, allow_pickle=True) if orig_h1_path.exists() else {}
 
     H_matrix = np.eye(3, dtype=np.float64)
     if T is not None:
@@ -198,10 +231,18 @@ def main():
     else:
         reproj_rmse = 0.0
 
+    ohrc_res = float(data.get('ohrc_gsd', 0.24))
+    tmc_res = float(data.get('tmc_gsd', 4.25))
+    scale_gap = float(data.get('scale_gap', 17.71))
+    target_lat = float(data.get('center_lat', -89.7207))
+    target_lon = float(data.get('center_lon', 223.1257))
+    ohrc_product_id = str(data.get('ohrc_product', 'ch2_ohr_ncp_20241115T1525004388'))
+    tmc_product_id = str(data.get('tmc_product', 'ch2_tmc_ncn_20231205T1906512971'))
+
     save_dict = {
         'disp_ohrc': disp_ohrc,
         'disp_tmc': disp_tmc,
-        'raw_tmc_crop': orig_meta.get('raw_tmc_crop', cv2.resize(disp_tmc, (300, 300))),
+        'raw_tmc_crop': data.get('tmc_raw', cv2.resize(disp_tmc, (240, 240))),
         'pts1': mkpts0_scaled.astype(np.float32),
         'pts2': mkpts1_scaled.astype(np.float32),
         'inlier_mask': inlier_mask_bool,
@@ -213,21 +254,30 @@ def main():
         'inlier_ratio': np.float64(inlier_ratio),
         'reproj_rmse': np.float64(round(reproj_rmse, 2)),
         'inlier_threshold': np.float64(15.0),
-        'ohrc_res': np.float64(orig_meta.get('ohrc_res', 0.26)),
-        'tmc_res': np.float64(orig_meta.get('tmc_res', 4.72)),
-        'scale_gap': np.float64(orig_meta.get('scale_gap', 18.15)),
-        'ohrc_product_id': str(orig_meta.get('ohrc_product_id', 'ch2_ohr_ncp_20211023T0027462822_d_img_d18')),
-        'tmc_product_id': str(orig_meta.get('tmc_product_id', 'ch2_tmc_ncn_20230130T1900132182_d_img_d32')),
-        'target_lat': np.float64(orig_meta.get('target_lat', -69.58)),
-        'target_lon': np.float64(orig_meta.get('target_lon', 32.29)),
-        'tmc_sun_elevation': np.float64(orig_meta.get('tmc_sun_elevation', 17.2)),
-        'tmc_sun_azimuth': np.float64(orig_meta.get('tmc_sun_azimuth', 53.0)),
-        'ohrc_sun_elevation': np.float64(orig_meta.get('ohrc_sun_elevation', 10.5)),
-        'ohrc_sun_azimuth': np.float64(orig_meta.get('ohrc_sun_azimuth', 167.6)),
+        'ohrc_res': np.float64(ohrc_res),
+        'tmc_res': np.float64(tmc_res),
+        'scale_gap': np.float64(scale_gap),
+        'ohrc_product_id': ohrc_product_id,
+        'tmc_product_id': tmc_product_id,
+        'target_lat': np.float64(target_lat),
+        'target_lon': np.float64(target_lon),
+        'center_lat': np.float64(target_lat),
+        'center_lon': np.float64(target_lon),
+        'tmc_sun_elevation': np.float64(data.get('tmc_sun_elevation', 1.5)),
+        'tmc_sun_azimuth': np.float64(data.get('tmc_sun_azimuth', 53.0)),
+        'ohrc_sun_elevation': np.float64(data.get('ohrc_sun_elevation', 1.5)),
+        'ohrc_sun_azimuth': np.float64(data.get('ohrc_sun_azimuth', 167.6)),
+        'site_name': 'Shackleton Rim (Lunar South Pole)',
+        'source_cache_file': cache_path.name,
         'flight_validated': True,
     }
+
+    # Strict provenance assertion: raises if any cross-file metadata leak is detected
+    assert_cache_provenance(data, {'disp_ohrc': disp_ohrc, 'disp_tmc': disp_tmc}, save_dict)
+
     np.savez_compressed(cache_ft_path, **save_dict)
     print(f"Saved fine-tuned cache to {cache_ft_path} ({cache_ft_path.stat().st_size:,} bytes)")
+
 
 if __name__ == '__main__':
     main()

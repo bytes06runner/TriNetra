@@ -259,9 +259,9 @@ HTML_CONTENT = """<!DOCTYPE html>
     </tr>
   </thead>
   <tbody>
-    <!-- Shiv Shakti Hop 1 -->
+    <!-- Survey Baseline Hop 1 -->
     <tr>
-      <td rowspan="4"><strong>Shiv Shakti Hop 1</strong><br/>(OHRC ↔ TMC-2)<br/>18.15× gap<br/>+15.76° roll</td>
+      <td rowspan="4"><strong>Survey Baseline Hop 1</strong><br/>(OHRC ↔ TMC-2)<br/>+15.76° roll</td>
       <td>SIFT Canonical (4-DoF)</td>
       <td>409</td>
       <td>5</td>
@@ -471,7 +471,7 @@ Strictly prevents unvalidated transforms with excessive error (>25 m) from corru
 
 | Site & Hop | Matcher (All 4-DoF) | Raw Matches | Inliers | Ratio | Reproj. RMSE (px) | Reproj. RMSE (m) | Runtime | Degeneracy Status | Flight Safety Gate |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Shiv Shakti Hop 1**<br/>(OHRC ↔ TMC-2, 18.15×) | SIFT Canonical (4-DoF) | 409 | 5 | — | — | — | 0.51s | DEGENERATE (<8) | 🛑 **GATED** |
+| **Survey Baseline Hop 1**<br/>(OHRC ↔ TMC-2) | SIFT Canonical (4-DoF) | 409 | 5 | — | — | — | 0.51s | DEGENERATE (<8) | 🛑 **GATED** |
 | | LightGlue + SuperPoint (4-DoF) | 10 | 5 | — | — | — | 2.01s | DEGENERATE (<8) | 🛑 **GATED** |
 | | EfficientLoFTR (4-DoF) | 116 | 8 | 6.9% | 6.29 px | 29.7 m | 3.79s | NON-DEGENERATE (≥8) | 🛑 **GATED** (<15%) |
 | | MatchAnything (4-DoF) | 34 | 4 | — | — | — | 2.49s | DEGENERATE (<8) | 🛑 **GATED** |

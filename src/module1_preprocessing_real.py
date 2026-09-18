@@ -42,7 +42,7 @@ class PreprocessedPatch:
 # ─────────────────────────────────────────────────────────────────────
 class OHRCRealPreprocessor:
     """
-    Shadow-aware CLAHE preprocessing for OHRC 0.26 m/px images.
+    Shadow-aware CLAHE preprocessing for OHRC images.
 
     The OHRC data from PRADAN is calibrated uint8.  South-polar images
     (sun_elevation ~9°) have extreme shadow coverage.  Standard histogram

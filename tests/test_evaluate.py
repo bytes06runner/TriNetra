@@ -17,7 +17,6 @@ from trinetra.evaluate import (
     evaluate_hop,
     export_match_points_csv,
     export_inliers_geojson,
-    compose_multihop,
     LUNAR_RADIUS_M,
     METRES_PER_DEG_LAT,
     RANSAC_THRESHOLD_PX,

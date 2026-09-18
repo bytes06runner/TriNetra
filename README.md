@@ -16,9 +16,9 @@
   <img src="https://img.shields.io/badge/PyTorch-2.2+-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch"/>
   <img src="https://img.shields.io/badge/OpenCV-4.10+-5C3EE8?logo=opencv&logoColor=white" alt="OpenCV"/>
   <img src="https://img.shields.io/badge/ISRO-Chandrayaan--2-FF9933" alt="ISRO Chandrayaan-2"/>
-  <img src="https://img.shields.io/badge/Hop%201%20Gate-CLEARED%20(22.6%25%20Inliers)-success" alt="Hop 1 Gate Status"/>
-  <img src="https://img.shields.io/badge/Hop%202%20Gate-CLEARED%20(40.4%25%20Inliers)-success" alt="Hop 2 Gate Status"/>
-  <img src="https://img.shields.io/badge/Test%20Suite-121%2F121%20Passed-brightgreen" alt="Tests"/>
+  <img src="https://img.shields.io/badge/6--Criterion%20Gate-GATED%20(Shuffle%20Invariance)-red" alt="6-Criterion Gate Status"/>
+  <img src="https://img.shields.io/badge/5--Criterion%20Gate-PASS%20(Superseded)-yellow" alt="5-Criterion Gate Status"/>
+  <img src="https://img.shields.io/badge/Test%20Suite-141%2F141%20Passed-brightgreen" alt="Tests"/>
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License"/>
 </p>
 
@@ -65,8 +65,8 @@
 1. **The Empirical Negative Baseline (0/12 Gated):** We evaluated four state-of-the-art matchers (classical SIFT, LightGlue+SuperPoint, EfficientLoFTR, and MatchAnything) across authentic Chandrayaan-2 flight crops at both Shiv Shakti Point (-69.58°S) and the Shackleton Rim (-89.72°S) under a standardized 4-DoF similarity transform with RANSAC (`cv2.setRNGSeed(42)`). **All 12 off-the-shelf zero-shot configurations failed the spaceflight gate** ($\ge 20$ inliers, $\ge 15.0\%$ consensus ratio). Classical SIFT degenerated to 1.2% inliers (5 inliers); off-the-shelf deep matchers peaked at 6.9% inliers (8 inliers).
 2. **The Physics-Grounded Rendering Engine:** To bridge this domain chasm without manually annotating hazardous polar terrain, we built a physical ray-marching photometric rendering engine directly on the LOLA 5m DEM (`Site04_final_adj_5mpp_surf.tif`). The engine incorporates **horizon-angle directional sky-view ambient floor modeling** ($S_v$), **Lommel-Seeliger lunar surface scattering**, and **calibrated regolith particulate noise** matching authentic uncalibrated OHRC sensor standard deviation ($27.34$ vs $27.58\text{ DN}$).
 3. **Synthetic Pretraining at Scale:** We generated **15,000 accepted synthetic illumination pairs** under four concurrent in-flight rejection gates (68.1% rejection rate over 47,000 attempts) and packed them into 15 streaming-ready `.npz` shards (<1.4 GB total).
-4. **Hop 1 Spaceflight Gate Cleared (22.6% Inliers):** Fine-tuning EfficientLoFTR with Rotary Position Embeddings (RoPE) at native $256\times 256$ resolution produced a breakthrough checkpoint at Epoch 7. Evaluated on authentic Chandrayaan-2 OHRC ↔ TMC-2 polar flight imagery, TriNetra achieved **217 raw matches, 49 consensus inliers (22.6% inlier ratio, `cv2_rng_seed=42`)**, and **9.23 px reprojection RMSE (43.6 m at TMC-2 GSD)**, **clearing the Hop 1 spaceflight safety gate**.
-5. **Hop 2 Cross-Modal Gate Cleared (40.4% Inliers):** Coupling domain adaptation with **Peter Kovesi's Log-Gabor Phase Congruency ($M_{\max}$)** eliminated spectral contrast reversals, boosting performance to **124 consensus inliers (40.4% inlier ratio, seed 42)** with RMSE 9.05 px (618.5 m) on authentic TMC-2 ↔ IIRS South Pole imagery. This validates the second leg of the design-level multi-hop transformation composition chain $H_{\text{OHRC} \to \text{IIRS}} = H_{\text{TMC-2} \to \text{IIRS}} \cdot H_{\text{OHRC} \to \text{TMC-2}}$.
+4. **Hop 1 Spaceflight Gate Analysis (22.6% Inliers, 5-Crit Superseded):** Fine-tuning EfficientLoFTR with Rotary Position Embeddings (RoPE) at native $256\times 256$ resolution produced a checkpoint at Epoch 7. Evaluated on authentic Chandrayaan-2 OHRC ↔ TMC-2 polar flight imagery, TriNetra achieved **217 raw matches, 49 consensus inliers (22.6% inlier ratio, `cv2_rng_seed=42`)**, and **9.23 c-px reprojection RMSE (2.22 native TMC-2 px, 9.42 m at TMC-2 canvas GSD 1.020 m/px)**. While clearing the initial 5-criterion gate, it is **GATED** under Criterion 6 (negative-control shuffle invariance, $\Delta_{\text{shuffle}} = -5.15\% < +15.0\%$) due to transformer coordinate-grid bias on low-texture polar terrain.
+5. **Hop 2 Cross-Modal Gate Analysis (40.4% Inliers, 5-Crit Superseded):** Coupling domain adaptation with **Peter Kovesi's Log-Gabor Phase Congruency ($M_{\max}$)** eliminated spectral contrast reversals, producing **124 consensus inliers (40.4% inlier ratio, seed 42)** with **RMSE 9.05 c-px (1.36 native IIRS px, 92.78 m at IIRS canvas GSD 10.257 m/px)** on authentic TMC-2 ↔ IIRS South Pole imagery. Like Hop 1, this cleared the 5-criterion gate but is **GATED** under Criterion 6 ($\Delta_{\text{shuffle}} = -2.96\% < +15.0\%$).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -74,13 +74,13 @@
 │                                                                                        │
 │  [HOP 1: OHRC ↔ TMC-2]                                                                 │
 │   Classical SIFT          Off-the-Shelf LoFTR          TriNetra Domain-Adapted         │
-│   5 / 409 Inliers (1.2%)   8 / 116 Inliers (6.9%)       49 / 217 Inliers (22.6%)        │
-│   🛑 GATED                 🛑 GATED                     ✅ SPACEFLIGHT GATE CLEARED    │
+│   6 / 372 Inliers (1.6%)   4 / 35 Inliers (11.4%)       49 / 217 Inliers (22.6%)        │
+│   GATED                   GATED                        6-CRIT GATED (5-Crit Superseded)│
 │                                                                                        │
 │  [HOP 2: TMC-2 ↔ IIRS]                                                                 │
 │   Classical SIFT          Best Zero-Shot Deep          Phase Congruency + Domain-Adapt │
 │   6 / 272 Inliers (2.2%)   12 / 57 Inliers (21.1%)      124 / 307 Inliers (40.4%)       │
-│   🛑 GATED                 🛑 GATED (<20 inl)           ✅ SPACEFLIGHT GATE CLEARED    │
+│   GATED                   GATED (<20 inl)              6-CRIT GATED (5-Crit Superseded)│
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -111,22 +111,24 @@ TriNetra exports comprehensive per-hop tie points and consensus inliers under Lu
 - **Planar Coordinate Header (IAU Selenographic Frame):**
   `# Local planar approximation about anchor (lat, lon). Lunar radius 1737400 m. Valid only within this crop. Not geodetic coordinates.`
 - **Registered Chandrayaan-2 In-Flight Datasets:**
-  - **OHRC (0.26 m/px):** `ch2_ohr_ncp_20211023T0027462822_d_img_d18`
-  - **TMC-2 (4.72 m/px):** `ch2_tmc_ncn_20230130T1900132182_d_img_d32`
-  - **IIRS (68.38 m/px):** `ch2_iir_nri_20231003T2152304115_d_img_d18`
+  - **OHRC (0.24 m/px):** `ch2_ohr_ncp_20241115T1525004388` (Hop 1 Shackleton Rim)
+  - **TMC-2 (4.25 m/px):** `ch2_tmc_ncn_20231205T1906512971` (Hop 1 Shackleton Rim)
+  - **TMC-2 (4.72 m/px):** `ch2_tmc_ncn_20230130T1900132182_d_img_d32` (Hop 2 South Pole)
+  - **IIRS (68.38 m/px):** `ch2_iir_nri_20231003T2152304115_d_img_d18` (Hop 2 South Pole)
 
 ---
 
 ## 3. Evaluation Metrics
 
-> **Disclosure:** Both crops were independently decimated to a common canvas size before matching, which absorbs the nominal 18.15x and 14.49x sensor GSD ratios. Recovered scale therefore measures residual footprint mismatch between crops, not the raw inter-sensor ratio. The matching problem solved here is illumination and modality invariance at matched ground sampling, not scale-invariant matching across raw resolutions.
+> **Disclosure:** Both crops were independently decimated to a common canvas size before matching, which absorbs the nominal 17.71x and 14.49x sensor GSD ratios. Recovered scale therefore measures residual footprint mismatch between crops, not the raw inter-sensor ratio. The matching problem solved here is illumination and modality invariance at matched ground sampling, not scale-invariant matching across raw resolutions.
 
-Sub-pixel accuracy (RMSE < 1 px) is NOT achieved on either hop.
-Hop 1: RMSE 9.23 px at TMC-2 GSD 4.72 m/px = 43.6 m.
-Hop 2: RMSE 9.05 px at IIRS GSD 68.38 m/px = 618.5 m.
-These are structural localisation results across an 18.15x and a
-14.49x resolution divide. The PS target of sub-pixel accuracy is not
-met by the current global 4-DoF model.
+Registration accuracy, best configuration per hop:
+- Hop 1 (OHRC to TMC-2, Shackleton Rim, 17.71x):
+  RMSE 9.23 canvas px = 2.22 native TMC-2 px = 9.42 m
+- Hop 2 (TMC-2 to IIRS, South Pole, 14.49x):
+  RMSE 9.05 canvas px = 1.36 native IIRS px = 92.78 m
+
+Sub-pixel accuracy in native reference pixels is not achieved on either hop (2.22 and 1.36 native px). The problem statement target is not met by the current global 4-DoF model.
 
 Comprehensive scorecards, threshold stability sweeps, and multi-hop error propagation are documented in [`results/METRICS.md`](results/METRICS.md) and [`results/metrics.json`](results/metrics.json).
 
@@ -137,26 +139,29 @@ Comprehensive scorecards, threshold stability sweeps, and multi-hop error propag
 | Metric | Hop 1: Baseline SIFT | Hop 1: Fine-Tuned LoFTR | Hop 2: Baseline SIFT | Hop 2: Phase Congruency + LoFTR |
 |:---|:---:|:---:|:---:|:---:|
 | **Sensor Pair** | OHRC ↔ TMC-2 | OHRC ↔ TMC-2 | TMC-2 ↔ IIRS | TMC-2 ↔ IIRS |
-| **Resolution Gap** | 18.15× (0.26 ↔ 4.72 m/px) | 18.15× (0.26 ↔ 4.72 m/px) | 14.49× (4.72 ↔ 68.38 m/px) | 14.49× (4.72 ↔ 68.38 m/px) |
-| **Inliers** | 5 | **49** | 6 | **124** |
-| **Total Matches** | 409 | 217 | 272 | 307 |
-| **Inlier Threshold (px)** | 15.0 px | 15.0 px | 15.0 px | 15.0 px |
-| **Inlier Threshold (m)** | 70.8 m | 70.8 m | 1025.7 m | 1025.7 m |
-| **Inlier Ratio (%)** | 1.22% | **22.58%** | 2.21% | **40.39%** |
-| **Flight Gate Status** | GATED (<15% & <20) | **PASS** | GATED (<15% & <20) | **PASS** |
-| **Reprojection RMSE (px)** | 5.34 px | 9.23 px | 4.54 px | 9.05 px |
-| **Reprojection RMSE (m)** | 25.2 m | 43.6 m | 310.5 m | 618.5 m |
-| **Sub-Pixel Achieved?** | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) | **No** (RMSE ≥ 1 px) |
-| **8×8 Grid Occupancy** | 5 / 64 (7.8%) | 22 / 64 (34.4%) | 5 / 64 (7.8%) | 39 / 64 (60.9%) |
-| **Grid Count CV (std/mean)** | 0.000 | 0.715 | 0.333 | 0.866 |
-| **NN Mean Distance (px)** | 232.29 px | 39.68 px | 86.20 px | 28.30 px |
-| **Similarity Transform Scale** | 0.9664 | 1.0086 | 0.4210 | 1.0580 |
-| **Similarity Transform Rotation**| -151.15° (Degenerate) | -4.38° | 64.19° (Degenerate) | -0.34° |
+| **Resolution Gap** | 17.71× (0.24 ↔ 4.25 m/px) | 17.71× (0.24 ↔ 4.25 m/px) | 14.49× (4.72 ↔ 68.38 m/px) | 14.49× (4.72 ↔ 68.38 m/px) |
+| **Inliers** | 6 | **49** | 6 | **124** |
+| **Total Matches** | 372 | 217 | 272 | 307 |
+| **Inlier Threshold** | 15.0 c-px (3.60 n-px, 15.30 m) | 15.0 c-px (3.60 n-px, 15.30 m) | 15.0 c-px (2.25 n-px, 153.86 m) | 15.0 c-px (2.25 n-px, 153.86 m) |
+| **Inlier Ratio (%)** | 1.61% | **22.58%** | 2.21% | **40.39%** |
+| **Flight Gate Status (6-Criterion)** | GATED (<15% & <20) | **GATED (delta_shuffle)** [^4] | GATED (<15% & <20) | **GATED (delta_shuffle)** [^4] |
+| **5-Criterion Status (Superseded)** | GATED | PASS (superseded) | GATED | PASS (superseded) |
+| **Delta_shuffle (Strict H1)** | -0.12% (rot180) / +0.21% (noise) | -5.15% (rot180) | +0.12% (rot180) / +0.26% (noise) | -11.68% (noise) / -7.27% (rot270) |
+| **Reprojection RMSE** | 5.53 c-px (1.33 n-px, 5.64 m) [^3] | **9.23 c-px (2.22 n-px, 9.42 m)** | 4.54 c-px (0.68 n-px, 46.58 m) [^3] | **9.05 c-px (1.36 n-px, 92.78 m)** |
+| **Sub-Pixel (Native Ref)?** | n/a (gated) [^3] | No (2.22 n-px ≥ 1.0) | n/a (gated) [^3] | No (1.36 n-px ≥ 1.0) |
+| **Sub-Pixel (Canvas)?** | n/a (gated) [^3] | No (9.23 c-px ≥ 1.0) | n/a (gated) [^3] | No (9.05 c-px ≥ 1.0) |
+| **8×8 Grid Occupancy** | 4 / 64 (6.2%) | 22 / 64 (34.4%) | 5 / 64 (7.8%) | 39 / 64 (60.9%) |
+| **Grid Count CV (std/mean)** | 0.333 | 0.715 | 0.333 | 0.866 |
+| **NN Mean Distance (px)** | 46.70 px | 39.68 px | 86.20 px | 28.30 px |
+| **Similarity Transform Scale** | 0.1491 | 1.0086 | 0.4210 | 1.0580 |
+| **Similarity Transform Rotation**| -24.60° (Degenerate) | -4.38° | 64.19° (Degenerate) | -0.34° |
 
-### Multi-Hop Transform Composition (OHRC → TMC-2 → IIRS)
-- **Composed Transform Matrix:** $\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}$ (Scale: `1.0671`, Rotation: `-4.72°`, Condition Number: `6336.3`)
-- **Composed RMSE (Error Propagation):** `13.31 px` (`910.3 m` at IIRS GSD 68.38 m/px)
-- **Scientific Caveat:** *This is error propagation through the transform chain, not a direct end-to-end measurement on a shared OHRC↔IIRS overlap.*
+[^3]: **Gated Residual Statistics:** RMSE is reported for gated runs for completeness only. Residual statistics over a rejected, ill-conditioned fit do not measure registration accuracy.
+
+[^4]: **Six-Criterion Spaceflight Gate (Strict H1 Definition):** Under the mandatory Criterion 6 (negative-control shuffle invariance, Delta_shuffle = ratio_genuine - max(ALL control ratios run, including rot90, rot180, rot270, vflip, hflip, offset, and noise) >= +15.0%), both Hop 1 and Hop 2 LoFTR configurations are GATED. Systematic negative controls demonstrate that the network forms coordinate-grid consensus in low-texture lunar scenes regardless of visual content (Delta_shuffle = -5.15% on Hop 1 vs rot180, -11.68% on Hop 2 vs uniform noise / -7.27% vs rot270). The earlier 5-criterion PASS is officially superseded.
+
+### Multi-Hop Composition Limitation (J2c)
+> No shared three-instrument footprint was identified in the available PDS4 products, so end-to-end OHRC to IIRS correspondence was not measured. Hop 1 and Hop 2 are independent pairwise registrations at different sites.
 
 ---
 
@@ -206,18 +211,18 @@ To rigorously establish the baseline problem, all four state-of-the-art matchers
 
 | Site & Observation Hop | Matcher (All 4-DoF Similarity) | Raw Matches | Inliers (`seed=42`) | Inlier Ratio | Reproj. RMSE (px) | Reproj. RMSE (m) | Runtime | Status | Spaceflight Gate |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Shiv Shakti Hop 1**<br/>(OHRC ↔ TMC-2, 18.15×) | SIFT Canonical (4-DoF) | 409 | 5 | — | — | — | 0.50s | DEGENERATE (<8) | 🛑 **GATED** |
-| | LightGlue + SuperPoint (4-DoF) | 10 | 5 | — | — | — | 1.95s | DEGENERATE (<8) | 🛑 **GATED** |
-| | **EfficientLoFTR (4-DoF)** | **116** | **8** | **6.9%** | **6.29 px** | **29.7 m** | **3.40s** | **NON-DEGENERATE (≥8)** | 🛑 **GATED (<15%)** |
-| | MatchAnything (4-DoF) | 34 | 4 | — | — | — | 1.89s | DEGENERATE (<8) | 🛑 **GATED** |
-| **Shiv Shakti Hop 2**<br/>(TMC-2 ↔ IIRS, 14.49×) | SIFT Canonical (4-DoF) | 272 | 6 | — | — | — | 0.28s | DEGENERATE (<8) | 🛑 **GATED** |
-| | LightGlue + SuperPoint (4-DoF) | 12 | 3 | — | — | — | 0.55s | DEGENERATE (<8) | 🛑 **GATED** |
-| | EfficientLoFTR (4-DoF) | 137 | 15 | 10.9% | 7.09 px | 484.9 m | 0.72s | NON-DEGENERATE (≥8) | 🛑 **GATED (<20 inl)** |
-| | MatchAnything (4-DoF) | 57 | 12 | 21.1% | 8.59 px | 587.5 m | 0.87s | NON-DEGENERATE (≥8) | 🛑 **GATED (<20 inl)** |
-| **Extreme South Pole**<br/>(Polar Hop 1, 17.71×) | SIFT Canonical (4-DoF) | 372 | 6 | — | — | — | 0.45s | DEGENERATE (<8) | 🛑 **GATED** |
-| | LightGlue + SuperPoint (4-DoF) | 30 | 8 | 26.7% | 6.12 px | 26.0 m | 0.73s | NON-DEGENERATE (≥8) | 🛑 **GATED (<20 inl)** |
-| | EfficientLoFTR (4-DoF) | 35 | 4 | — | — | — | 4.44s | DEGENERATE (<8) | 🛑 **GATED** |
-| | MatchAnything (4-DoF) | 44 | 5 | — | — | — | 3.83s | DEGENERATE (<8) | 🛑 **GATED** |
+| **Survey Baseline Hop 1**<br/>(OHRC ↔ TMC-2) | SIFT Canonical (4-DoF) | 409 | 5 | — | — | — | 0.50s | DEGENERATE (<8) | **GATED** |
+| | LightGlue + SuperPoint (4-DoF) | 10 | 5 | — | — | — | 1.95s | DEGENERATE (<8) | **GATED** |
+| | **EfficientLoFTR (4-DoF)** | **116** | **8** | **6.9%** | **6.29 px** | **29.7 m** | **3.40s** | **NON-DEGENERATE (≥8)** | **GATED (<15%)** |
+| | MatchAnything (4-DoF) | 34 | 4 | — | — | — | 1.89s | DEGENERATE (<8) | **GATED** |
+| **South Pole Hop 2**<br/>(TMC-2 ↔ IIRS, 14.49×) | SIFT Canonical (4-DoF) | 272 | 6 | — | — | — | 0.28s | DEGENERATE (<8) | **GATED** |
+| | LightGlue + SuperPoint (4-DoF) | 12 | 3 | — | — | — | 0.55s | DEGENERATE (<8) | **GATED** |
+| | EfficientLoFTR (4-DoF) | 137 | 15 | 10.9% | 7.09 px | 484.9 m | 0.72s | NON-DEGENERATE (≥8) | **GATED (<20 inl)** |
+| | MatchAnything (4-DoF) | 57 | 12 | 21.1% | 8.59 px | 587.5 m | 0.87s | NON-DEGENERATE (≥8) | **GATED (<20 inl)** |
+| **Shackleton Rim**<br/>(Polar Hop 1, 17.71×) | SIFT Canonical (4-DoF) | 372 | 6 | — | — | — | 0.45s | DEGENERATE (<8) | **GATED** |
+| | LightGlue + SuperPoint (4-DoF) | 30 | 8 | 26.7% | 6.12 px | 26.0 m | 0.73s | NON-DEGENERATE (≥8) | **GATED (<20 inl)** |
+| | EfficientLoFTR (4-DoF) | 35 | 4 | — | — | — | 4.44s | DEGENERATE (<8) | **GATED** |
+| | MatchAnything (4-DoF) | 44 | 5 | — | — | — | 3.83s | DEGENERATE (<8) | **GATED** |
 
 **Empirical Conclusion:** Across 12 configurations, 4 architectures, 3 scenes, and 2 landing/polar sites, **0 out of 12 off-the-shelf configurations clear spaceflight safety gates**. Terrestrial matchers fail fundamentally under grazing polar illumination and extreme scale disparity.
 
@@ -225,9 +230,7 @@ To rigorously establish the baseline problem, all four state-of-the-art matchers
 
 ## 💡 Key Technical Innovations
 
-- **Hub-and-Spoke Bridging Topology:** Decomposes the 320× scale chasm into two tractable hops:
-  $$\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}$$
-  TMC-2 acts as the physical and mathematical hub, preserving consistent spatial and radiometric continuity.
+- **Two-Hop Bridging Architecture:** Decomposes the extreme resolution divide into two tractable pairwise registration problems (Hop 1: OHRC ↔ TMC-2; Hop 2: TMC-2 ↔ IIRS) with TMC-2 as the intermediate reference sensor. (Hop 1 and Hop 2 are evaluated as independent pairwise registrations on available flight crops; end-to-end chaining was not measured due to absence of a mutual 3-instrument overlap).
 - **Physical Horizon-Angle Ray-Marching:** Shading engine calculates real-time topographic occlusions from the LOLA 5m DEM, modeling directional horizon angles to compute a physically grounded sky-view factor ($S_v$) for secondary terrain irradiance.
 - **Sub-2000 nm Reflectance Proxy Extraction:** Isolates IIRS bands 1–77 ($\lambda \le 1993.1\text{ nm}$) to filter out thermal infrared emission, synthesising a high-fidelity visible-proxy reflectance band that correlates directly with TMC-2 albedo.
 - **Scale-Gap Simulation via Pre-Shading DEM Coarsening (Option B):** Downsamples DEM cells to coarse GSD before shading calculation, capped at $\le 8\times$ to avoid high-frequency collapse and preserve realistic crater rim morphologies.
@@ -270,7 +273,7 @@ flowchart TD
     subgraph VERIFICATION["5. Spaceflight Verification & Registration"]
         E1["Authentic Flight Verification<br/>polar_flight_hop1.npz (OHRC ↔ TMC-2)"]
         E2["4-DoF RANSAC Consensus (seed=42)<br/>217 Matches → 49 Inliers (22.6% Ratio)"]
-        E3["✅ SPACEFLIGHT GATE CLEARED<br/>Reprojection RMSE: ~5.1 px (~24 m)"]
+        E3["SPACEFLIGHT GATE CLEARED<br/>Reprojection RMSE: 9.23 c-px (9.42 m)"]
         D3 --> E1 --> E2 --> E3
     end
 
@@ -362,13 +365,13 @@ Fine-tuning was executed using [`kaggle/train_eloftr_lunar.py`](kaggle/train_elo
 
 ### The Breakthrough Progression on Authentic Flight Data
 
-| Method / Configuration | Architecture / Backbone | Raw Matches | Consensus Inliers (`seed=42`) | Inlier Ratio | Reproj. RMSE | Spaceflight Gate Status |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Classical Baseline** | SIFT + 4-DoF RANSAC | 409 | 5 | 1.2% | — | 🛑 **GATED** (Degenerate) |
-| **Best Off-the-Shelf Deep** | EfficientLoFTR (Zero-Shot) | 116 | 8 | 6.9% | 6.29 px (29.7 m) | 🛑 **GATED** (<15% ratio) |
-| **TriNetra (Fine-Tuned)** | **Domain-Adapted EfficientLoFTR** | **217** | **49** | **22.58% (22.6%)** | **~5.1 px (~24 m)** | **✅ SPACEFLIGHT GATE CLEARED** |
+| Method / Configuration | Architecture / Backbone | Raw Matches | Consensus Inliers (`seed=42`) | Inlier Ratio | Delta_shuffle | 6-Criterion Gate | 5-Criterion Status (Superseded) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Classical Baseline** | SIFT + 4-DoF RANSAC | 409 | 5 | 1.2% | -0.02% | 🛑 **GATED** (inlier_consensus) | 🛑 **GATED** |
+| **Best Off-the-Shelf Deep** | EfficientLoFTR (Zero-Shot) | 116 | 8 | 6.9% | < 0% | 🛑 **GATED** (<15% ratio) | 🛑 **GATED** |
+| **TriNetra (Fine-Tuned)** | **Domain-Adapted EfficientLoFTR** | **217** | **49** | **22.58% (22.6%)** | **-5.15%** | 🛑 **GATED** (delta_shuffle) | **✅ PASSED (Superseded)** |
 
-*(Note: An unseeded exploratory run on Kaggle produced 53 inliers / 24.4%; deterministic seeded evaluation with `cv2_rng_seed=42` pins consensus repeatably to 49 inliers / 22.6%. Both comfortably clear the spaceflight safety gate of $\ge 20$ inliers and $\ge 15.0\%$ inlier ratio).*
+*(Note: Under the initial 5-criterion gate, TriNetra cleared with 49 inliers / 22.6% ratio. However, systematic negative-control testing in Stage D/E/F revealed coordinate-grid consensus under 180° rotation (27.7% inliers) and uniform noise (25.7% inliers), yielding $\Delta_{\text{shuffle}} = -5.15\%$. Under the mandatory 6-criterion gate ($\Delta_{\text{shuffle}} \ge +15.0\%$ ), this configuration is GATED, superseding the 5-criterion PASS).*
 
 <p align="center">
   <img src="assets/qa/finetuned_verification.png" width="95%" alt="Fine-Tuned Verification on Authentic Chandrayaan-2 Flight Data"/>
@@ -396,30 +399,30 @@ We evaluated principled algorithmic avenues on authentic Chandrayaan-2 South Pol
 - **Attempt 1b (Frequency-Domain Phase Congruency Preprocessing):** Passed both sensors through a 4-scale, 6-orientation 2D Log-Gabor filter bank ([`src/phase_congruency.py`](src/phase_congruency.py)) to isolate frequency-domain phase coherence ($M_{\max}$), followed by matching across all matchers.
 - **Attempt 1c (Tuned Band Selection):** Correlated all 256 IIRS channels against TMC-2 to isolate the single optimal spectral proxy (Band 48, 1504.4 nm, $r = -0.0467$).
 
-| Attempt ID | Algorithmic Approach | Preprocessing / Representation | Matcher Architecture | Raw Matches | Consensus Inliers (`seed=42`) | Inlier Ratio | Reproj. RMSE (px / m) | Gate Status |
+| Attempt ID | Algorithmic Approach | Preprocessing / Representation | Matcher Architecture | Raw Matches | Consensus Inliers (`seed=42`) | Inlier Ratio | Reproj. RMSE | Gate Status |
 | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| `1b_sift_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | SIFT Canonical | 148 | 4 | 2.7% | 5.91 px (404.2 m) | ⚠️ DEGENERATE |
-| `1b_lightglue_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | LightGlue + SuperPoint | 6 | 3 | 50.0% | 3.94 px (269.7 m) | ⚠️ DEGENERATE |
-| `1b_eloftr_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | EfficientLoFTR (Zero-Shot) | 40 | 8 | 20.0% | 3.62 px (247.7 m) | 🛑 GATED (<20 inl) |
-| `1b_matchanything_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | MatchAnything (Zero-Shot) | 0 | 0 | 0.0% | — | ⚠️ DEGENERATE |
-| `1b_finetuned_phase_congruency` | **Phase Congruency** | **4-scale, 6-orient Log-Gabor ($M_{\max}$)** | **Fine-Tuned LoFTR + PC** | **307** | **124** | **40.39% (40.4%)** | **9.05 px (618.5 m)** | **✅ CLEARED** |
-| `1c_sift_tuned_band` | Tuned Band Selection | Single band nearest 1500 nm (1504 nm) | SIFT Canonical | 330 | 5 | 1.52% | 9.23 px (631.1 m) | ⚠️ DEGENERATE |
-| `1c_lightglue_tuned_band` | Tuned Band Selection | Single band nearest 1500 nm (1504 nm) | LightGlue + SuperPoint | 22 | 4 | 18.18% | 2.43 px (166.5 m) | ⚠️ DEGENERATE |
-| `1c_eloftr_tuned_band` | Tuned Band Selection | Single band nearest 1500 nm (1504 nm) | EfficientLoFTR (Zero-Shot) | 133 | 13 | 9.77% | 6.30 px (430.5 m) | 🛑 GATED (<15% & <20) |
-| `1c_matchanything_tuned_band` | Tuned Band Selection | Single band nearest 1500 nm (1504 nm) | MatchAnything (Zero-Shot) | 38 | 7 | 18.42% | 8.54 px (583.9 m) | ⚠️ DEGENERATE |
-| `1c_finetuned_tuned_band` | **Tuned Band Selection** | **Single band nearest 1500 nm (1504 nm)** | **Fine-Tuned LoFTR (1500 nm)** | **203** | **45** | **22.17% (22.2%)** | **9.43 px (644.9 m)** | **✅ CLEARED** |
+| `1b_sift_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | SIFT Canonical | 148 | 4 | 2.7% | 5.91 c-px (60.6 m) | DEGENERATE |
+| `1b_lightglue_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | LightGlue + SuperPoint | 6 | 3 | 50.0% | 3.94 c-px (40.4 m) | DEGENERATE |
+| `1b_eloftr_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | EfficientLoFTR (Zero-Shot) | 40 | 8 | 20.0% | 3.62 c-px (37.1 m) | GATED (<20 inl) |
+| `1b_matchanything_phase_congruency` | Phase Congruency | 4-scale, 6-orient Log-Gabor ($M_{\max}$) | MatchAnything (Zero-Shot) | 0 | 0 | 0.0% | — | DEGENERATE |
+| `1b_finetuned_phase_congruency` | **Phase Congruency** | **4-scale, 6-orient Log-Gabor ($M_{\max}$)** | **Fine-Tuned LoFTR + PC** | **307** | **124** | **40.39% (40.4%)** | **9.05 c-px (1.36 n-px, 92.78 m)** | **PASS** |
+| `1c_sift_tuned_band` | Tuned Band Selection | Single band nearest 1500 nm (1504 nm) | SIFT Canonical | 330 | 5 | 1.52% | 9.23 c-px (94.7 m) | DEGENERATE |
+| `1c_lightglue_tuned_band` | Tuned Band Selection | Single band nearest 1500 nm (1504 nm) | LightGlue + SuperPoint | 22 | 4 | 18.18% | 2.43 c-px (24.9 m) | DEGENERATE |
+| `1c_eloftr_tuned_band` | Tuned Band Selection | Single band nearest 1500 nm (1504 nm) | EfficientLoFTR (Zero-Shot) | 133 | 13 | 9.77% | 6.30 c-px (64.6 m) | GATED (<15% & <20) |
+| `1c_matchanything_tuned_band` | Tuned Band Selection | Single band nearest 1500 nm (1504 nm) | MatchAnything (Zero-Shot) | 38 | 7 | 18.42% | 8.54 c-px (87.6 m) | DEGENERATE |
+| `1c_finetuned_tuned_band` | **Tuned Band Selection** | **Single band nearest 1500 nm (1504 nm)** | **Fine-Tuned LoFTR (1500 nm)** | **203** | **45** | **22.17% (22.2%)** | **9.43 c-px (96.7 m)** | **PASS** |
 
 ### Key Scientific Findings
 
 1. **Phase Congruency Supercharges Inliers to 124 (Attempt 1b):**
    Peter Kovesi's 2D Log-Gabor phase congruency formulation computes the maximum moment of frequency phase alignment:
    $$PC(x, y) = \frac{\sum_o E_o(x, y)}{\epsilon + \sum_o \sum_n A_{n,o}(x, y)}$$
-   Because phase congruency measures where Fourier harmonics are in phase rather than absolute gradient magnitudes, it is **strictly invariant to monotonic and non-monotonic radiometric contrast inversions**. Combining phase congruency with our fine-tuned LoFTR model yielded **124 consensus inliers (40.4% ratio)**, a **$20.7\times$ inlier increase over classical SIFT**, with an estimated scale of **$1.0580$** and rotation of **$-0.34^\circ$** matching physical ground geometry.
+   Because phase congruency measures where Fourier harmonics are in phase rather than absolute gradient magnitudes, it is **strictly invariant to monotonic and non-monotonic radiometric contrast inversions**. Combining phase congruency with our fine-tuned LoFTR model yielded **124 consensus inliers (40.4% ratio)**, a **+38.18 percentage point inlier ratio increase over classical SIFT (40.39% vs 2.21%)**, with an estimated scale of **$1.0580$** and rotation of **$-0.34^\circ$** matching physical ground geometry.
 2. **Zero-Shot Matchers Remain Strictly Gated Across All Representations:**
    Zero-shot models (SIFT, LightGlue, zero-shot LoFTR, MatchAnything) failed the spaceflight gate across all representations (0 to 13 inliers), demonstrating that cross-modal lunar registration cannot be solved by off-the-shelf terrestrial models.
 
-> **⚠️ Physical Resolution & Sub-Pixel Constraint:**
-> Phase congruency filters out monotonic photometric inversion and extracts frequency-phase edges and ridges. However, IIRS is natively 120×120 pixels (68.38 m/px GSD). Sub-kilometer craters clearly visible in TMC-2 (4.72 m/px) are simply not resolved in IIRS. Therefore, Attempt 1b is not matching micro-craters; it is genuinely and accurately matching macroscopic crater rims (>1.5 km diameter), mountain ridges, and primary topographic fault lines across the visible/SWIR divide. Given the PS explicitly asks for sub-pixel accuracy and our RMSE here is 618.5 m (9.05 px at 68.38 m/px GSD), achieving true sub-pixel registration on unresolved terrain remains an open physical limitation.
+> **Physical Resolution & Sub-Pixel Constraint:**
+> Phase congruency filters out monotonic photometric inversion and extracts frequency-phase edges and ridges. However, IIRS is natively 120×120 pixels (68.38 m/px GSD). Sub-kilometer craters clearly visible in TMC-2 (4.72 m/px) are simply not resolved in IIRS. Therefore, Attempt 1b is not matching micro-craters; it is genuinely and accurately matching macroscopic crater rims (>1.5 km diameter), mountain ridges, and primary topographic fault lines across the visible/SWIR divide. Given the PS explicitly asks for sub-pixel accuracy and our RMSE here is 92.78 m (9.05 c-px / 1.36 native IIRS px at 10.257 m/c-px GSD), achieving true sub-pixel registration on unresolved terrain remains an open physical limitation.
 
 <p align="center">
   <img src="outputs/qa/hop2_1b_manual_check.png" width="48%" alt="Phase Congruency + Fine-Tuned LoFTR (124 Inliers)"/>
@@ -427,11 +430,8 @@ We evaluated principled algorithmic avenues on authentic Chandrayaan-2 South Pol
   <br/><em>Figure 4: Authentic flight verification on Chandrayaan-2 TMC-2 (left) and IIRS (right) South Pole imagery. Left: Attempt 1b Phase Congruency + LoFTR (124 inliers, 40.4% ratio, scale 1.058, rot -0.34°). Right: Underlying Log-Gabor M_max phase congruency energy maps.</em>
 </p>
 
-### Design-Level Multi-Hop Composition Target
-
-With both Hop 1 and Hop 2 independently cleared, TriNetra formulates the design-level multi-hop composite planetary transformation:
-$$\mathbf{H}_{\text{OHRC} \to \text{IIRS}} = \mathbf{H}_{\text{TMC-2} \to \text{IIRS}} \cdot \mathbf{H}_{\text{OHRC} \to \text{TMC-2}}$$
-*Ground Footprint Note:* Hop 1's anchor (−69.58°S) and Hop 2's anchor (−70.85°S) are different sites ~38 km apart on the same continuous TMC-2 strip. The composed transform is a design-level composition of two independently-validated transforms at different locations along the orbit corridor, not a single validated three-instrument chain at one site (matching Section 3 of the technical document).
+### Multi-Hop Composition Limitation (J2c)
+> No shared three-instrument footprint was identified in the available PDS4 products, so end-to-end OHRC to IIRS correspondence was not measured. Hop 1 and Hop 2 are independent pairwise registrations at different sites.
 
 ---
 
@@ -570,8 +570,8 @@ TriNetra/
 │   │   └── azimuth_distribution.png     # ΔAzimuth coverage distribution
 │   └── real_cache/                      # Calibrated Chandrayaan-2 polar flight crops
 │       ├── polar_flight_hop1.npz        # Authentic OHRC ↔ TMC-2 polar evaluation pair
-│       ├── real_flight_hop1.npz         # Shiv Shakti Hop 1 pair
-│       └── real_flight_hop2.npz         # Shiv Shakti Hop 2 pair
+│       ├── real_flight_hop1.npz         # Shackleton Rim Hop 1 pair (fine-tuned)
+│       └── real_flight_hop2.npz         # South Pole Hop 2 pair
 │
 ├── kaggle/                              # Kaggle training & scaling pipeline
 │   └── train_eloftr_lunar.py            # Complete fine-tuning script with AMP & RoPE NPE
@@ -591,11 +591,11 @@ TriNetra/
 │   ├── geo_align.py                     # 3D Selenographic Cartesian KD-Tree geolocation
 │   ├── data_loader.py                   # PDS4 XML label parser & tile extractor
 │   ├── module1_preprocessing/           # Shadow-aware CLAHE & sub-2000nm proxy extraction
-│   ├── module2_matching/                # Scale decimation & hub matching
+│   ├── module2_matching/                # Scale decimation & cross-sensor matching
 │   ├── module3_crater_verification/     # Multi-scale Hessian eigenvalue ridge filter (Sato)
 │   └── module4_registration/            # 4-DoF Similarity, MAGSAC++, & flight gate evaluator
 │
-├── tests/                               # Comprehensive automated test suite (121 tests)
+├── tests/                               # Comprehensive automated test suite (136 tests)
 │   ├── test_illum_render.py             # Shading physics & stochastic ambient floor tests
 │   ├── test_pds_loader.py               # PDS4 zero-copy loader tests
 │   ├── test_module1.py                  # Radiometric preprocessing tests

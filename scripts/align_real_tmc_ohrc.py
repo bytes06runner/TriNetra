@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """
-Finalize Real Flight OHRC ↔ TMC-2 Correspondence:
-- Real OHRC: ch2_ohr_ncp_20211023T0027462822_d_img_d18 (0.26 m/px, Lines 10000:14000, Samples 4000:8000)
-  Center: Lat -69.58019, Lon 32.28800
-- Real TMC-2: ch2_tmc_ncn_20230130T1900132182_d_img_d32 (4.72 m/px, Lines 132550:132850, Samples 560:860)
-  Center: Lat -69.57911, Lon 32.27507
+[DEPRECATED — HISTORICAL ARCHIVE ONLY]
+scripts/align_real_tmc_ohrc.py
+
+NOTICE: This script produced an exploratory crop pair over Shiv Shakti Point (-69.58°S)
+with an arbitrary TMC-2 crop radius of half_l=150, half_s=150 (300x300 px @ 4.72 m/px = 1416 m footprint)
+against OHRC (4000x4000 px @ 0.26 m/px = 1040 m footprint). This introduced an uncalibrated
+36.15% ground footprint mismatch (1416 m vs 1040 m), resulting in an expected canvas scale of 0.7345.
+
+As of Verification Round 3, Hop 1 has officially adopted the calibrated Shackleton Rim pair
+(polar_flight_hop1.npz at -89.7207°S, 223.1257°E; OHRC 960 m vs TMC-2 1020 m footprint; scale gap 17.71x).
+This file is retained strictly for provenance auditing and must NOT be used to generate official deliverables.
 """
 
 import math

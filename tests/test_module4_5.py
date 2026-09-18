@@ -195,3 +195,24 @@ class TestFlightGateAndDegeneracy:
         assert res["is_gated"] is True
         assert any("Unphysical rotation" in r for r in res["reasons"])
 
+    def test_flight_gate_rejects_negative_delta_shuffle(self):
+        # Hop 1: 22.58% genuine vs 27.73% rot180 -> delta_shuffle = -5.15%
+        res = evaluate_flight_gate(
+            inliers=49, total_matches=217, inlier_ratio_pct=22.58,
+            ratio_rot180=27.73, ratio_rot90=18.18, ratio_vflip=19.59
+        )
+        assert res["is_gated"] is True
+        assert res["status"] == "GATED"
+        assert res["first_failing_criterion"] == "delta_shuffle"
+        assert pytest.approx(-5.15, abs=0.01) == res["delta_shuffle"]
+
+    def test_flight_gate_rejects_missing_delta_shuffle_when_required(self):
+        res = evaluate_flight_gate(
+            inliers=49, total_matches=217, inlier_ratio_pct=22.58,
+            require_delta_shuffle=True
+        )
+        assert res["is_gated"] is True
+        assert res["status"] == "GATED"
+        assert res["first_failing_criterion"] == "missing_delta_shuffle"
+
+
