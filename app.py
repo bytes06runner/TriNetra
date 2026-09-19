@@ -1150,7 +1150,7 @@ if st.session_state.active_scene == "hop1":
             h1_eng = st.radio(
                 "Correspondence Engine:",
                 ["deep", "sift"],
-                format_func=lambda k: "🚀 TriNetra Deep Pipeline (Fine-Tuned ELoFTR) [✅ CLEARED]" if k == "deep" else "🏛️ Classical Baseline (SIFT + MAGSAC++) [🛑 GATED]",
+                format_func=lambda k: "🚀 TriNetra Deep Pipeline (Fine-Tuned ELoFTR) [🛑 GATED — Criterion 6]" if k == "deep" else "🏛️ Classical Baseline (SIFT + MAGSAC++) [🛑 GATED]",
                 index=0 if st.session_state.hop1_engine == "deep" else 1,
                 horizontal=True,
                 key="h1_engine_stage2"
@@ -1244,7 +1244,7 @@ if st.session_state.active_scene == "hop1":
             h1_eng3 = st.radio(
                 "Correspondence Engine:",
                 ["deep", "sift"],
-                format_func=lambda k: "🚀 TriNetra Deep Pipeline (Fine-Tuned ELoFTR) [✅ CLEARED]" if k == "deep" else "🏛️ Classical Baseline (SIFT + MAGSAC++) [🛑 GATED]",
+                format_func=lambda k: "🚀 TriNetra Deep Pipeline (Fine-Tuned ELoFTR) [🛑 GATED — Criterion 6]" if k == "deep" else "🏛️ Classical Baseline (SIFT + MAGSAC++) [🛑 GATED]",
                 index=0 if st.session_state.hop1_engine == "deep" else 1,
                 horizontal=True,
                 key="h1_engine_stage3"
@@ -1283,10 +1283,11 @@ if st.session_state.active_scene == "hop1":
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
-                <div class="status-banner-success">
-                    <strong>✅ Spaceflight Gate CLEARED: Fine-Tuned EfficientLoFTR ({active_data['inlier_ratio']:.1f}% Inlier Ratio, {active_data['inliers']} of {active_data['total_matches']} matches, seed=42)</strong><br/>
-                    Domain-adapted EfficientLoFTR achieves <strong>{active_data['inliers']} RANSAC inliers</strong> ({active_data['inlier_ratio']:.1f}% ratio) on the authentic OHRC↔TMC-2 flight pair —
-                    clearing the spaceflight gate (≥15% ratio AND ≥20 inliers) that all 12 zero-shot configurations failed.
+                <div class="status-banner-warning">
+                    <strong>🛑 GATED under Criterion 6 (negative controls): Fine-Tuned EfficientLoFTR ({active_data['inlier_ratio']:.1f}% Inlier Ratio, {active_data['inliers']} of {active_data['total_matches']} matches, seed=42)</strong><br/>
+                    Domain-adapted EfficientLoFTR reaches <strong>{active_data['inliers']} RANSAC inliers</strong> ({active_data['inlier_ratio']:.1f}% ratio) on the authentic OHRC↔TMC-2 flight pair,
+                    which clears the superseded five-criterion gate (≥15% ratio AND ≥20 inliers). The same matcher reaches 27.73% on a 180°-rotated reference and 25.74% on uniform noise,
+                    so Delta_shuffle = −5.15% against a +15% requirement: these inliers are not distinguishable from coordinate-grid consensus.
                     Reprojection error is <strong>{rmse_m:.1f} m</strong> ({rmse_px:.2f} px in the TMC-2 frame at {target_gsd:.2f} m/px).
                 </div>
                 """, unsafe_allow_html=True)
@@ -1476,7 +1477,7 @@ if st.session_state.active_scene == "hop1":
                 with c_prog2:
                     st.markdown(metric_card("Best Zero-Shot Deep", f"{zs_hop1_ratio:.1f}% Ratio", f"{zs_hop1_inliers} inliers ({zs_hop1_inliers}/{zs_hop1_raw}, seed {zs_hop1_seed}), 🛑 GATED"), unsafe_allow_html=True)
                 with c_prog3:
-                    st.markdown(metric_card("Fine-Tuned EfficientLoFTR", f"{ft_ratio:.1f}% Ratio", f"{ft_inliers} inliers ({ft_inliers}/{ft_raw}, seed {ft_seed}), ✅ CLEARED"), unsafe_allow_html=True)
+                    st.markdown(metric_card("Fine-Tuned EfficientLoFTR", f"{ft_ratio:.1f}% Ratio", f"{ft_inliers} inliers ({ft_inliers}/{ft_raw}, seed {ft_seed}), 🛑 GATED (Δshuffle −5.15%)"), unsafe_allow_html=True)
 
                 st.markdown("""
                 <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin:1.2rem 0;">
@@ -1705,7 +1706,7 @@ elif st.session_state.active_scene == "hop2":
             h2_eng2 = st.radio(
                 "Correspondence Engine:",
                 ["deep", "sift"],
-                format_func=lambda k: "🚀 TriNetra Deep Pipeline (Phase Congruency + LoFTR) [✅ CLEARED]" if k == "deep" else "🏛️ Classical Baseline (SIFT + MAGSAC++) [🛑 GATED]",
+                format_func=lambda k: "🚀 TriNetra Deep Pipeline (Phase Congruency + LoFTR) [🛑 GATED — Criterion 6]" if k == "deep" else "🏛️ Classical Baseline (SIFT + MAGSAC++) [🛑 GATED]",
                 index=0 if st.session_state.hop2_engine == "deep" else 1,
                 horizontal=True,
                 key="h2_engine_stage2"
@@ -1789,7 +1790,7 @@ elif st.session_state.active_scene == "hop2":
             h2_eng3 = st.radio(
                 "Correspondence Engine:",
                 ["deep", "sift"],
-                format_func=lambda k: "🚀 TriNetra Deep Pipeline (Phase Congruency + LoFTR) [✅ CLEARED]" if k == "deep" else "🏛️ Classical Baseline (SIFT + MAGSAC++) [🛑 GATED]",
+                format_func=lambda k: "🚀 TriNetra Deep Pipeline (Phase Congruency + LoFTR) [🛑 GATED — Criterion 6]" if k == "deep" else "🏛️ Classical Baseline (SIFT + MAGSAC++) [🛑 GATED]",
                 index=0 if st.session_state.hop2_engine == "deep" else 1,
                 horizontal=True,
                 key="h2_engine_stage3"
@@ -1843,9 +1844,10 @@ elif st.session_state.active_scene == "hop2":
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
-                <div class="status-banner-success">
-                    <strong>✅ Spaceflight Gate CLEARED: Cross-Modal Phase Congruency + LoFTR ({flight_h2['inlier_ratio']:.1f}% Inlier Ratio, {flight_h2['inliers']} of {flight_h2['total_matches']} matches, seed=42)</strong><br/>
-                    Log-Gabor phase congruency projection coupled with fine-tuned LoFTR clears the spaceflight gate (≥15% ratio AND ≥20 inliers) with <strong>{flight_h2['inliers']} RANSAC inliers</strong> across the 14.49× resolution gap and 135.8° solar azimuth disparity between TMC-2 visible panchromatic and IIRS SWIR. Reprojection error is <strong>{rmse_val:.2f} px ({rmse_m:.1f} m)</strong> under a 4-DoF similarity transform (scale 1.058, rotation -0.34°).
+                <div class="status-banner-warning">
+                    <strong>🛑 GATED under Criterion 6 (negative controls): Cross-Modal Phase Congruency + LoFTR ({flight_h2['inlier_ratio']:.1f}% Inlier Ratio, {flight_h2['inliers']} of {flight_h2['total_matches']} matches, seed=42)</strong><br/>
+                    Uniform noise reaches 52.07% and a 270°-rotated reference 47.66% through the same pipeline, so Delta_shuffle = −11.68% against a +15% requirement.
+                    Log-Gabor phase congruency projection coupled with fine-tuned LoFTR clears only the superseded five-criterion gate (≥15% ratio AND ≥20 inliers) with <strong>{flight_h2['inliers']} RANSAC inliers</strong> across the 14.49× resolution gap and 135.8° solar azimuth disparity between TMC-2 visible panchromatic and IIRS SWIR. Reprojection error is <strong>{rmse_val:.2f} px ({rmse_m:.1f} m)</strong> under a 4-DoF similarity transform (scale 1.058, rotation -0.34°).
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1995,7 +1997,7 @@ elif st.session_state.active_scene == "hop2":
                 with c_p2:
                     st.markdown(metric_card("Best Zero-Shot Deep", "21.1% Ratio", "12 inliers (12/57), 🛑 GATED"), unsafe_allow_html=True)
                 with c_p3:
-                    st.markdown(metric_card("Phase Congruency + LoFTR", "40.4% Ratio", "124 inliers (124/307, seed 42), ✅ CLEARED"), unsafe_allow_html=True)
+                    st.markdown(metric_card("Phase Congruency + LoFTR", "40.4% Ratio", "124 inliers (124/307, seed 42), 🛑 GATED (Δshuffle −11.68%)"), unsafe_allow_html=True)
 
                 st.markdown("""
                 <div style="background:#FFFFFF; border:1px solid rgba(177,173,161,0.45); border-radius:10px; padding:1.2rem; margin:1.2rem 0;">

@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/ISRO-Chandrayaan--2-FF9933" alt="ISRO Chandrayaan-2"/>
   <img src="https://img.shields.io/badge/6--Criterion%20Gate-GATED%20(Shuffle%20Invariance)-red" alt="6-Criterion Gate Status"/>
   <img src="https://img.shields.io/badge/5--Criterion%20Gate-PASS%20(Superseded)-yellow" alt="5-Criterion Gate Status"/>
-  <img src="https://img.shields.io/badge/Test%20Suite-144%2F144%20Passed-brightgreen" alt="Tests"/>
+  <img src="https://img.shields.io/badge/Test%20Suite-170%2F170%20Passed-brightgreen" alt="Tests"/>
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License"/>
 </p>
 
@@ -26,6 +26,16 @@
   <strong>Live Web Application:</strong> <a href="https://trinetra-i47cv6nzuwappqbgcrrvup4.streamlit.app">https://trinetra-i47cv6nzuwappqbgcrrvup4.streamlit.app</a><br/>
   <strong>GitHub Repository:</strong> <a href="https://github.com/bytes06runner/TriNetra.git">https://github.com/bytes06runner/TriNetra.git</a>
 </p>
+
+---
+
+> **Current state (2026-09-20).**
+> - **OHRC → LROC NAC at the Chandrayaan-3 landing site (Stage P).** 3,072 of 3,126 nodes are consistent, and all seven negative controls produce **zero** inliers (Delta_shuffle **+98.3 pp**). Held-out residuals against the LOLA-controlled NAC orthophoto are **0.54 m** (interpolating) and 1.42 m (extrapolating 3+ km) at 1.13 m working resolution. A terrain-relief term recovers the OHRC viewing angle from parallax to within 0.5° of the product label.
+> - **TMC-2 → LROC NAC at Pitiscus (Stage O).** 1,607 of 1,781 nodes, controls zero, Delta_shuffle +90.2 pp, held-out 1.00 px (4.7 m) extrapolating.
+> - **ISRO geometry offset.** Three Chandrayaan-2 geometry products (TMC-2 at two sites, OHRC at one) place the imagery **3.7–3.8 km north** (along-track) of its LOLA-controlled NAC position.
+> - **Negative result.** TMC-2 → NAC at the Chandrayaan-3 site is GATED: the coarse offset is solid, but only 2% of nodes match.
+>
+> All figures are residuals against references with their own `lola_rms` (0.92–1.85 m), not ground-truth errors, and are not claimed as sub-pixel cross-sensor accuracy. See [Stages N–P](#-stages-no-independent-corroboration--first-control-surviving-registration), [`results/UPGRADE_P_VIKRAM.md`](results/UPGRADE_P_VIKRAM.md), [`results/UPGRADE_O_REGISTRATION.md`](results/UPGRADE_O_REGISTRATION.md) and [`results/ERRATA.md`](results/ERRATA.md). The intra-Chandrayaan-2 hops below (OHRC↔TMC-2, TMC-2↔IIRS) remain **GATED** under Criterion 6.
 
 ---
 
@@ -45,6 +55,7 @@
 - [The Domain-Adapted Fine-Tuning Breakthrough (Hop 1)](#-the-domain-adapted-fine-tuning-breakthrough-hop-1)
 - [Hop 2 Cross-Modal Breakthrough (Phase Congruency & Domain Transfer)](#-hop-2-cross-modal-breakthrough-phase-congruency--domain-transfer)
 - [Stages J–M: LOLA Ground Truth Benchmark & Sub-Pixel Validation](#-stages-jm-lola-ground-truth-benchmark--sub-pixel-validation)
+- [Stages N–O: Independent Corroboration & First Control-Surviving Registration](#-stages-no-independent-corroboration--first-control-surviving-registration)
 - [Pipeline Modules Deep Dive](#-pipeline-modules-deep-dive)
 - [Interactive Mission-Control Web Dashboard](#-interactive-mission-control-web-dashboard)
 - [Installation, Local Setup & Reproduction Guide](#-installation-local-setup--reproduction-guide)
@@ -67,7 +78,7 @@
 2. **The Physics-Grounded Rendering Engine:** To bridge this domain chasm without manually annotating hazardous polar terrain, we built a physical ray-marching photometric rendering engine directly on the LOLA 5m DEM (`Site04_final_adj_5mpp_surf.tif`). The engine incorporates **horizon-angle directional sky-view ambient floor modeling** ($S_v$), **Lommel-Seeliger lunar surface scattering**, and **calibrated regolith particulate noise** matching authentic uncalibrated OHRC sensor standard deviation ($27.34$ vs $27.58\text{ DN}$).
 3. **Synthetic Pretraining at Scale:** We generated **15,000 accepted synthetic illumination pairs** under four concurrent in-flight rejection gates (68.1% rejection rate over 47,000 attempts) and packed them into 15 streaming-ready `.npz` shards (<1.4 GB total).
 4. **Hop 1 Spaceflight Gate Analysis (22.6% Inliers, 5-Crit Superseded):** Fine-tuning EfficientLoFTR with Rotary Position Embeddings (RoPE) at native $256\times 256$ resolution produced a checkpoint at Epoch 7. Evaluated on authentic Chandrayaan-2 OHRC ↔ TMC-2 polar flight imagery, TriNetra achieved **217 raw matches, 49 consensus inliers (22.6% inlier ratio, `cv2_rng_seed=42`)**, and **9.23 c-px reprojection RMSE (2.22 native TMC-2 px, 9.42 m at TMC-2 canvas GSD 1.020 m/px)**. While clearing the initial 5-criterion gate, it is **GATED** under Criterion 6 (negative-control shuffle invariance, $\Delta_{\text{shuffle}} = -5.15\% < +15.0\%$) due to transformer coordinate-grid bias on low-texture polar terrain.
-5. **Hop 2 Cross-Modal Gate Analysis (40.4% Inliers, 5-Crit Superseded):** Coupling domain adaptation with **Peter Kovesi's Log-Gabor Phase Congruency ($M_{\max}$)** eliminated spectral contrast reversals, producing **124 consensus inliers (40.4% inlier ratio, seed 42)** with **RMSE 9.05 c-px (1.36 native IIRS px, 92.78 m at IIRS canvas GSD 10.257 m/px)** on authentic TMC-2 ↔ IIRS South Pole imagery. Like Hop 1, this cleared the 5-criterion gate but is **GATED** under Criterion 6 ($\Delta_{\text{shuffle}} = -2.96\% < +15.0\%$).
+5. **Hop 2 Cross-Modal Gate Analysis (40.4% Inliers, 5-Crit Superseded):** Coupling domain adaptation with **Peter Kovesi's Log-Gabor Phase Congruency ($M_{\max}$)** eliminated spectral contrast reversals, producing **124 consensus inliers (40.4% inlier ratio, seed 42)** with **RMSE 9.05 c-px (1.36 native IIRS px, 92.78 m at IIRS canvas GSD 10.257 m/px)** on authentic TMC-2 ↔ IIRS South Pole imagery. Like Hop 1, this cleared the 5-criterion gate but is **GATED** under Criterion 6 (strict $\Delta_{\text{shuffle}} = -11.68\%$ vs uniform noise, $-7.27\%$ vs rot270; $< +15.0\%$).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
@@ -274,7 +285,7 @@ flowchart TD
     subgraph VERIFICATION["5. Spaceflight Verification & Registration"]
         E1["Authentic Flight Verification<br/>polar_flight_hop1.npz (OHRC ↔ TMC-2)"]
         E2["4-DoF RANSAC Consensus (seed=42)<br/>217 Matches → 49 Inliers (22.6% Ratio)"]
-        E3["SPACEFLIGHT GATE CLEARED<br/>Reprojection RMSE: 9.23 c-px (9.42 m)"]
+        E3["5-criterion gate only (superseded)<br/>GATED under Criterion 6: Delta_shuffle -5.15%"]
         D3 --> E1 --> E2 --> E3
     end
 
@@ -376,7 +387,7 @@ Fine-tuning was executed using [`kaggle/train_eloftr_lunar.py`](kaggle/train_elo
 
 <p align="center">
   <img src="assets/qa/finetuned_verification.png" width="95%" alt="Fine-Tuned Verification on Authentic Chandrayaan-2 Flight Data"/>
-  <br/><em>Figure 3: Independent verification of TriNetra on authentic Chandrayaan-2 OHRC (left) and TMC-2 (right) polar flight imagery. Green lines indicate 49 verified geometric consensus inliers (22.6% ratio, seed 42) clearing the spaceflight safety gate.</em>
+  <br/><em>Figure 3: Independent verification of TriNetra on authentic Chandrayaan-2 OHRC (left) and TMC-2 (right) polar flight imagery. Green lines indicate 49 geometric consensus inliers (22.6% ratio, seed 42). These clear only the superseded five-criterion gate; a 180°-rotated reference reaches 27.7%, so the configuration is GATED under Criterion 6.</em>
 </p>
 
 ### Overfitting Detection & Checkpoint Dynamics
@@ -450,7 +461,7 @@ To evaluate dense correspondence against geodetic ground truth and isolate the t
 
 ### Stage J: Dense Correlation Benchmark & Failure Diagnosis
 Dense template correlation ($128\times 128$ search window, $64\times 64$ template) on an uncorrected common map grid yielded only $0.20\%$ node acceptance (2 of 1,024 nodes). Systematic diagnostic investigation revealed three distinct physical failure causes:
-1. **Pointing & Ephemeris Misalignment:** Measured a-priori offset between TMC-2 and the NAC reference was $\Delta x = -387.60\text{ m}$, $\Delta y = +1,057.49\text{ m}$ (total Euclidean shift: $1,126.29\text{ m} = 238.62\text{ px}$), placing true matches far outside standard search radii.
+1. **Pointing & Ephemeris Misalignment:** Measured a-priori offset between TMC-2 and the NAC reference was $\Delta x = -387.60\text{ m}$, $\Delta y = +1,057.49\text{ m}$ (total Euclidean shift: $1,126.29\text{ m} = 238.62\text{ px}$), placing true matches far outside standard search radii. **Correction (Stage N):** this offset is not supported by independent evidence. Whole-strip phase correlation and non-circular NCC both place the offset at $(+87.65, +799.51)$ px $\approx 3.80$ km, 600 px (2.83 km) from this value. See [`results/ERRATA.md`](results/ERRATA.md).
 2. **Solar Azimuth Separation ($78.32^\circ$):** TMC-2 sun azimuth ($60.87^\circ$, illumination from ENE) versus NAC sun azimuth ($342.55^\circ$, illumination from NNW) creates near-perpendicular shadow casting and slope shading inversion.
 3. **Crater Repetitive Self-Similarity:** Circular crater rims produce local correlation peaks on nearby, geometrically similar craters.
 
@@ -460,7 +471,7 @@ Detailed findings: [`results/UPGRADE_J_DENSE.md`](results/UPGRADE_J_DENSE.md).
 
 ### Stage K: Coarse Alignment, Conforming Swath Grid & Phase Congruency
 Stage K implemented three targeted architectural enhancements:
-1. **Bulk Offset Compensation (K1):** The measured $1,126.29\text{ m}$ global vector was applied a-priori to re-center the search windows.
+1. **Bulk Offset Compensation (K1):** The measured $1,126.29\text{ m}$ global vector was applied a-priori to re-center the search windows. **Correction (Stage N):** that vector was wrong by 600 px, about 19× the 32 px search radius, so no Stage K/L node could contain its true match. The control parity reported below follows from that, not from illumination.
 2. **Conforming Swath Grid (K3):** Replaced rectangular grid with an interior $16 \times 70$ swath grid ($1,120$ nodes), dropping nodata boundary rejections from $38.9\%$ to $0.0\%$.
 3. **Illumination-Normalised Phase Congruency (K2):** Compared Raw NCC, Gradient Orientation, and Log-Gabor Phase Congruency ($M_{\max}$, 4 scales, 6 orientations). Phase congruency elevated node acceptance from $0.18\%$ to **$28.93\%$ (324 accepted nodes)** with mean peak correlation $0.4745$.
 
@@ -508,10 +519,63 @@ Downsampled native NAC imagery to $4.72\text{ m/px}$ (matching TMC-2) and evalua
 - **Controls:** Noise yielded $0.0\%$ acceptance; 180° rotation produced $52.5\text{ m}$ error ($125\times$ error margin).
 
 #### Core Diagnostic Conclusion
-Sub-pixel accuracy ($< 1.0\text{ px}$) is proven on real lunar terrain ($0.12\text{ px} = 0.25\text{ m}$ native; $0.21\text{ ref px} = 0.42\text{ m}$ across the scale gap). **The sensor resolution gap does not impede sub-meter registration.** The sole root cause of cross-sensor divergence is the $78.32^\circ$ solar illumination azimuth disparity combined with circular crater rim rotational symmetry.
+The correlation estimator recovers synthetic Fourier shifts to $0.12\text{ px}$ ($0.25\text{ m}$) on NAC texture, and recovers known shifts across the $2.36\times$ resampling gap to $0.21\text{ ref px}$ ($0.42\text{ m}$) **under matched illumination**. That validates the estimator and the resampling, not cross-sensor registration. **Correction (Stage N/O):** the earlier statement that the $78.32^\circ$ illumination disparity was the sole root cause of the Stage J–L failure is withdrawn. The search windows were centred 2.83 km from the true match. With the corrected offset, raw NCC accepts 96% of nodes across the same illumination difference (Stage O).
 
 Detailed findings: [`results/UPGRADE_M_SUBPIXEL_TRUTH.md`](results/UPGRADE_M_SUBPIXEL_TRUTH.md).  
 Artifacts: [`results/figures/stage_m_peak_locking.png`](results/figures/stage_m_peak_locking.png).
+
+---
+
+## 🧭 Stages N–O: Independent Corroboration & First Control-Surviving Registration
+
+### Stage N: a second estimator that shares no code with the first
+Every earlier result came from one pipeline. Stage N adds a numpy-only whole-image Fourier phase correlator ([`src/corroboration/phase_correlation.py`](src/corroboration/phase_correlation.py)) that shares no matching, fitting or scoring code with it; a test enforces the import boundary. It finds:
+- **Hop 1 and Hop 2:** no significant peak under any variant. That is consistent with their GATED status and adds no evidence either way.
+- **Matched-illumination scale gap (Stage M geometry):** agreement with the primary estimator to 0.088 px RMSE, and with known non-circular truth to 0.048 px.
+- **Pitiscus:** a significant, reproducible offset of $(+87.65, +799.51)$ px (PSR 54.5 against ≤ 8.6 for every control). A plain NCC check and `cv2.phaseCorrelate` confirm it. It is **600 px (2.83 km) from the Stage J2c offset** that Stages K and L used.
+
+### Stage O: TMC-2 → LROC NAC orthophoto at Pitiscus
+Seeded by the Stage N offset, dense NCC with a second-order model (selected by held-out error) produces:
+
+| Metric | Value |
+|:---|:---|
+| Nodes evaluated / accepted / inliers @ 1.5 px | 1,781 / 1,713 / 1,607 |
+| All seven controls (rot90, rot180, rot270, vflip, hflip, non-overlapping offset, noise) | **0 inliers each** |
+| Delta_shuffle | **+90.23 pp** (gate +15 pp) |
+| Held-out RMSE, spatial blocks (extrapolating) | 1.00 px = 4.73 m; median 0.69 px; 96.4% of nodes within 3 px |
+| Held-out RMSE, random 5-fold (interpolating) | 0.76 px = 3.60 m; median 0.51 px |
+| In-sample RMSE | 0.63 px = 2.99 m |
+| Spatial coverage (8×8 cells containing nodes) | 54 / 56 (96.4%), CV 0.41 |
+| Independent closure (Stage N estimator on the product) | residual shifts −0.23 to +0.86 px |
+
+<p align="center">
+  <img src="results/stage_o/figures/stage_o_checkerboard.png" width="95%" alt="Stage O before/after checkerboard"/>
+  <br/><em>Figure: NAC / TMC-2 checkerboard before (left) and after (centre) registration. Crater rims continue across tiles only after registration, despite opposite shading under a 78° sun-azimuth difference.</em>
+</p>
+
+These are residuals against an orthophoto whose own error is `lola_rms` 0.92 m. They are not ground-truth errors, and they are not a claim of sub-pixel accuracy for cross-sensor registration. Products: [`results/stage_o/`](results/stage_o/). Full report: [`results/UPGRADE_O_REGISTRATION.md`](results/UPGRADE_O_REGISTRATION.md).
+
+---
+
+### Stage P: OHRC → LROC NAC at the Chandrayaan-3 (Vikram / Shiv Shakti) landing site
+Reference: `NAC_DTM_VIKRAMSITE1` (LOLA-controlled, `lola_rms` 1.85 m), orthophoto M1442997156 at 1 m, plus the DTM. The source is `ch2_ohr_ncp_20211023T0027462822` (sun elevation 9.1°, roll 15.76°), worked in its own line/sample frame at 1.13 m.
+
+| Metric | Value |
+|:---|:---|
+| Nodes evaluated / accepted / inliers | 3,126 / 3,076 / 3,072 |
+| All seven controls | **0 inliers each**; Delta_shuffle **+98.27 pp** |
+| Held-out RMSE, 500-row stripes | **0.479 px = 0.54 m** (94.9% within 1 px) |
+| Held-out RMSE, random folds / spatial blocks | 0.388 px (0.44 m) / 1.252 px (1.42 m) |
+| Product vs NAC reprojected by rasterio | median residual 0.17 px, max 0.58 px (23 tiles) |
+| Relief parallax → view angle | 16.81° fitted vs 17.32° from the label |
+| ISRO geometry → NAC | 3.72 km (482 m E, 3,687 m S) |
+
+<p align="center">
+  <img src="results/stage_p/ohrc/figures/stage_p_ohrc_checkerboard.png" width="95%" alt="Stage P OHRC to NAC checkerboard at the Chandrayaan-3 site"/>
+  <br/><em>Figure: NAC / registered OHRC checkerboard at the Chandrayaan-3 landing site (512 px at 1.13 m). Tile boundaries are not visible.</em>
+</p>
+
+TMC-2 → NAC at the same site is **GATED**. The coarse offset is significant in 14 of 14 segments, but dense NCC accepts 2.2% of nodes, consistent with (though not demonstrated to be) the large sun-azimuth difference. Full report: [`results/UPGRADE_P_VIKRAM.md`](results/UPGRADE_P_VIKRAM.md).
 
 ---
 
@@ -553,12 +617,12 @@ TriNetra includes an interactive Streamlit application featuring a dark, high-co
 - **Hop 1 — Step 3 (Learned & Classical Matcher Evaluation):**
   - **Tab 1:** Baseline SIFT (1.2% inlier ratio, 🛑 GATED).
   - **Tab 2:** Master 0/12 Zero-Shot Scorecard (all configurations gated).
-  - **Tab 3:** Fine-Tuned EfficientLoFTR (**✅ CLEARED — 22.6% inlier ratio, 49 inliers, `cv2_rng_seed=42`**), featuring side-by-side progression cards, live training/validation loss curve, and the verified flight correspondence overlay.
+  - **Tab 3:** Fine-Tuned EfficientLoFTR (**GATED under Criterion 6 — 22.6% inlier ratio, 49 inliers, `cv2_rng_seed=42`; Delta_shuffle −5.15%**), featuring side-by-side progression cards, live training/validation loss curve, and the verified flight correspondence overlay.
 - **Hop 2 — Step 1 & 2 (Footprint Ingestion & Proxies):** Sub-2000nm proxy synthesis, pushbroom destriping (91.7% variance reduction), and 14.5× scale alignment.
 - **Hop 2 — Step 3 (Cross-Modal Registration & Verification Overlay):**
   - **Tab 1:** Baseline SIFT (2.2% inlier ratio, 🛑 GATED, illustrative candidate overlay).
   - **Tab 2:** Hop 2 Zero-Shot Baseline Scorecard (all 4 off-the-shelf terrestrial matchers fail the spaceflight gate).
-  - **Tab 3:** Cross-Modal Breakthrough (**✅ CLEARED — 40.4% Phase Congruency, 124 inliers, `cv2_rng_seed=42`**), displaying the 10-attempt matrix, 3-card progression, engineering methodology, physical resolution constraints, and flight verification overlays.
+  - **Tab 3:** Cross-Modal Phase Congruency (**GATED under Criterion 6 — 40.4%, 124 inliers, `cv2_rng_seed=42`; Delta_shuffle −11.68%**), displaying the 10-attempt matrix, 3-card progression, engineering methodology, physical resolution constraints, and flight verification overlays.
 - **System Overview & Mission Pillars:** Technical briefing, mathematical multi-hop transformation composition ($T_{\text{OHRC} \to \text{IIRS}} = T_{\text{TMC-2} \to \text{IIRS}} \cdot T_{\text{OHRC} \to \text{TMC-2}}$), and architectural pillars for ISRO jury evaluation.
 
 ---
@@ -608,15 +672,24 @@ Model parameters: 16,025,216
 Raw matches: 217
 Inliers after RANSAC: 49
 Inlier ratio: 22.58%
-Gate: CLEARED
+Inlier consensus (Criterion 1 only): met
+Gate: GATED (Criterion 6: Delta_shuffle -5.15%, see results/RESULTS.md)
 ```
 
 ### 4. Run the Full Automated Test Suite
 
 ```bash
-pytest -q
+pytest tests/ -q
 ```
-**Output:** `121 passed in ~150s (0 regressions)`.
+**Output:** `170 passed in ~115s`. Run `tests/` only: the root-level `test_*.py` files are ad-hoc scripts with side effects.
+
+### 4b. Reproduce Stages N and O (requires the TMC-2 product and NAC Pitiscus orthophoto under `data/`)
+
+```bash
+python scripts/evaluate_stage_n.py /tmp/stage_n_rerun.json
+python scripts/evaluate_stage_o.py /tmp/stage_o_rerun.json /tmp/stage_o_rerun
+```
+Both runners refuse to overwrite existing outputs.
 
 ### 5. Launch the Web Application
 
@@ -667,6 +740,12 @@ TriNetra/
 │   ├── UPGRADE_K_COARSE_FINE.md         # Stage K: Phase congruency & swath grid report
 │   ├── UPGRADE_L_GEOMETRIC_FILTER.md    # Stage L: Geometric consistency filtering report
 │   ├── UPGRADE_M_SUBPIXEL_TRUTH.md      # Stage M: Sub-pixel validation against known truth
+│   ├── UPGRADE_N_CORROBORATION.md       # Stage N: independent phase-correlation corroboration
+│   ├── UPGRADE_O_REGISTRATION.md        # Stage O: TMC-2 -> LROC NAC registration (control-surviving)
+│   ├── ERRATA.md                        # Corrections to earlier stage reports
+│   ├── stage_o/                         # Registered GeoTIFF, tie points CSV/GeoJSON, figures
+│   ├── UPGRADE_P_VIKRAM.md              # Stage P: OHRC/TMC-2 -> NAC at the Chandrayaan-3 landing site
+│   ├── stage_p/                         # Stage P products (OHRC registered GeoTIFF, tie points, figures)
 │   ├── figures/                         # Diagnostic figures, quiver plots, peak maps
 │   ├── matchpoints/                     # Inliers and matches (CSV & GeoJSON)
 │   └── stage_{k,l}_displacement_field*  # Registered GeoTIFFs, CSVs & GeoJSONs
@@ -679,6 +758,9 @@ TriNetra/
 │   ├── evaluate_stage_k.py              # Stage K coarse-to-fine phase congruency evaluator
 │   ├── evaluate_stage_l.py              # Stage L vector median & RANSAC filter evaluator
 │   ├── evaluate_stage_m.py              # Stage M synthetic sub-pixel known-truth validator
+│   ├── evaluate_stage_n.py              # Stage N independent corroboration runner
+│   ├── evaluate_stage_o.py              # Stage O TMC-2 -> NAC registration runner
+│   ├── evaluate_stage_p.py              # Stage P source-frame registration runner (OHRC / TMC-2 -> NAC)
 │   ├── export_stage_k_deliverables.py   # GeoTIFF/CSV/GeoJSON exporter for Stage K
 │   └── export_stage_l_deliverables.py   # GeoTIFF/CSV/GeoJSON exporter for Stage L
 │
@@ -691,9 +773,11 @@ TriNetra/
 │   ├── module1_preprocessing/           # Shadow-aware CLAHE & sub-2000nm proxy extraction
 │   ├── module2_matching/                # Scale decimation & cross-sensor matching
 │   ├── module3_crater_verification/     # Multi-scale Hessian eigenvalue ridge filter (Sato)
-│   └── module4_registration/            # 4-DoF Similarity, MAGSAC++, & flight gate evaluator
+│   ├── module4_registration/            # 4-DoF Similarity, MAGSAC++, & flight gate evaluator
+│   ├── corroboration/                   # Stage N: independent numpy-only phase correlation
+│   └── lunar_reg/                       # Stage O: grid, dense NCC, models, held-out validation, products
 │
-├── tests/                               # Comprehensive automated test suite (144 tests)
+├── tests/                               # Comprehensive automated test suite (170 tests)
 │   ├── test_evaluate.py                 # Evaluation & spaceflight gate suite
 │   ├── test_illum_render.py             # Shading physics & stochastic ambient floor tests
 │   ├── test_pds_loader.py               # PDS4 zero-copy loader tests

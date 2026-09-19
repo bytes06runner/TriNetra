@@ -18,3 +18,7 @@ models/*.ckpt
 # Checkpoint directories
 kaggle_checkpoints/*.pt
 kaggle_checkpoints/*.pth
+
+# Stage P full-precision products exceed GitHub 100 MB limit; regenerate with scripts/evaluate_stage_p.py
+results/stage_p/ohrc/registered_ohrc_vikram.tif
+results/stage_p/tmc/registered_tmc_vikram.tif

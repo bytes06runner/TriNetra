@@ -148,13 +148,18 @@ def main():
             
     # Compute inliers, ratio, gate status
     inlier_ratio = (inliers_num / raw_matches_num * 100) if raw_matches_num > 0 else 0
-    gate_status = "CLEARED" if (inlier_ratio >= 15.0 and inliers_num >= 20) else "GATED"
+    # Criterion 1 only (superseded five-criterion era). The six-criterion gate also needs
+    # Delta_shuffle >= +15% from negative controls, which this script does not run;
+    # the recorded value for this configuration is -5.15% (results/RESULTS.md), so it is GATED.
+    consensus_status = "met" if (inlier_ratio >= 15.0 and inliers_num >= 20) else "not met"
+    gate_status = "GATED (Criterion 6: Delta_shuffle -5.15%, see results/RESULTS.md)"
     
     # 5. Print clearly
     print("\n--- Evaluation Results ---")
     print(f"Raw matches: {raw_matches_num}")
     print(f"Inliers after RANSAC: {inliers_num}")
     print(f"Inlier ratio: {inlier_ratio:.2f}%")
+    print(f"Inlier consensus (Criterion 1 only): {consensus_status}")
     print(f"Gate: {gate_status}")
     print("\nExpected approximate numbers: 217 raw / 53 inliers / 24.4%")
     print("Matches reproduce expectation: ", end="")
@@ -199,7 +204,7 @@ def main():
             ax.scatter([x0, x1 + 1000], [y0, y1], color='lime', s=10)
             
     title_str = (f"Fine-Tuned Verification\n"
-                 f"Raw: {raw_matches_num} | Inliers: {inliers_num} ({inlier_ratio:.1f}%) | Gate: {gate_status}")
+                 f"Raw: {raw_matches_num} | Inliers: {inliers_num} ({inlier_ratio:.1f}%) | Criterion 1: {consensus_status} | 6-criterion: GATED")
     ax.set_title(title_str, fontsize=16)
     
     plt.tight_layout()
