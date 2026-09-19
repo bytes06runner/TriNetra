@@ -683,13 +683,26 @@ pytest tests/ -q
 ```
 **Output:** `170 passed in ~115s`. Run `tests/` only: the root-level `test_*.py` files are ad-hoc scripts with side effects.
 
-### 4b. Reproduce Stages N and O (requires the TMC-2 product and NAC Pitiscus orthophoto under `data/`)
+### 4b. Reproduce Stages N, O and P
+
+**Data** (not in git; `data/` is gitignored):
+
+| Product | Source | Used by |
+|:---|:---|:---|
+| TMC-2 `ch2_tmc_ncn_20230130T1900132182_d_img_d32` (image + geometry CSV) | ISRO PRADAN (login required) → `data/ch2_tmc_ncn_20230130T1900132182_d_img_d32/` | N, O, P |
+| OHRC `ch2_ohr_ncp_20211023T0027462822_d_img_d18` (image + geometry CSV) | ISRO PRADAN → `~/Desktop/data/data/calibrated/20211023/` and `~/Desktop/data/geometry/calibrated/20211023/` | P |
+| `NAC_DTM_PITISCUS_M1149280834_2M.TIF` | LROC RDR (public) → `data/lroc_nac/` | N, O |
+| `NAC_DTM_VIKRAMSITE1_M1442997156_3M.TIF` (122 MB), `_100CM.TIF` (1.1 GB), `NAC_DTM_VIKRAMSITE1.TIF` (DTM, 488 MB) | LROC RDR (public) → `data/lroc_nac/VIKRAMSITE1/` | P |
+
+LROC base URL: `https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/`. The orthophotos are under `EXTRAS/BROWSE/NAC_DTM/<SITE>/` and the DTM under `DATA/SDP/NAC_DTM/<SITE>/`.
 
 ```bash
 python scripts/evaluate_stage_n.py /tmp/stage_n_rerun.json
 python scripts/evaluate_stage_o.py /tmp/stage_o_rerun.json /tmp/stage_o_rerun
+python scripts/evaluate_stage_p.py ohrc /tmp/stage_p_ohrc.json /tmp/stage_p_ohrc
+python scripts/evaluate_stage_p.py tmc  /tmp/stage_p_tmc.json  /tmp/stage_p_tmc
 ```
-Both runners refuse to overwrite existing outputs.
+All runners refuse to overwrite existing outputs. Runtime is about 1–3 minutes each on a laptop CPU; Stage P OHRC peaks at about 7 GB RAM.
 
 ### 5. Launch the Web Application
 
